@@ -64,8 +64,11 @@ func main() {
 	mux.HandleFunc("/api/agent/scorecard", handleAgentScorecard)
 	mux.HandleFunc("/api/agent/chat", handleAgentChat)
 
-	// Serve static frontend files
-	fs := http.FileServer(http.Dir(filepath.Join("frontend")))
+	frontendDir := "frontend"
+	if _, err := os.Stat(frontendDir); os.IsNotExist(err) {
+		frontendDir = filepath.Join("..", "frontend")
+	}
+	fs := http.FileServer(http.Dir(frontendDir))
 	mux.Handle("/", fs)
 
 	// Apply CORS wrapper
