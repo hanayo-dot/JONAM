@@ -6,7 +6,6 @@ if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }
 
-// Generate the standalone React 18 production app bundle from TSX components
 const bundleHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,6 +15,8 @@ const bundleHTML = `<!DOCTYPE html>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -42,7 +43,7 @@ const bundleHTML = `<!DOCTYPE html>
       padding: 24px 16px;
       -webkit-font-smoothing: antialiased;
     }
-    .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .container { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
     .lean-card { background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
     header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
     header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
@@ -59,7 +60,8 @@ const bundleHTML = `<!DOCTYPE html>
     .metric-card { background: rgba(31, 41, 55, 0.6); border: 1px solid rgba(55, 65, 81, 0.5); border-radius: 8px; padding: 12px; }
     .metric-label { font-size: 0.7rem; color: var(--text-muted); }
     .metric-val { font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
-    .chat-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 420px; background: #111827; border-left: 1px solid #374151; display: none; flex-direction: column; z-index: 100; box-shadow: -8px 0 24px rgba(0,0,0,0.5); }
+    .map-container { height: 300px; width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid #374151; margin-top: 10px; }
+    .chat-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 420px; background: #111827; border-left: 1px solid #374151; display: none; flex-direction: column; z-index: 1000; box-shadow: -8px 0 24px rgba(0,0,0,0.5); }
     .chat-drawer.open { display: flex; }
     .chat-header { padding: 16px; border-bottom: 1px solid #374151; display: flex; justify-content: space-between; align-items: center; }
     .chat-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -74,7 +76,7 @@ const bundleHTML = `<!DOCTYPE html>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
     function ScorecardReport({ report, loading, onGenerate }) {
       if (loading) {
@@ -89,7 +91,7 @@ const bundleHTML = `<!DOCTYPE html>
         return (
           <div className="lean-card" style={{ textAlign: 'center', padding: '32px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>AI Ecological Risk Scorecard</h3>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Generate a real-time risk report for this location.</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Click any point on the map above or select a hotspot to generate an ecological risk report.</p>
             <button onClick={onGenerate} className="btn-lean">Generate Risk Report</button>
           </div>
         );
@@ -111,7 +113,7 @@ const bundleHTML = `<!DOCTYPE html>
 
       return (
         <div className="lean-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
             <div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ECOLOGICAL RISK SCORECARD</div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{report.location}</h2>
@@ -234,6 +236,10 @@ const bundleHTML = `<!DOCTYPE html>
       const [loading, setLoading] = useState(false);
       const [isChatOpen, setIsChatOpen] = useState(false);
 
+      const mapRef = useRef(null);
+      const mapInstance = useRef(null);
+      const markerRef = useRef(null);
+
       const hotspots = [
         { name: 'Kisumu Bay, Kenya', lat: -0.1022, lon: 34.7617 },
         { name: 'Homa Bay, Kenya', lat: -0.5273, lon: 34.4571 },
@@ -261,8 +267,40 @@ const bundleHTML = `<!DOCTYPE html>
         }
       };
 
+      const handleLocationSelect = (loc) => {
+        setSelectedLocation(loc);
+        if (mapInstance.current) {
+          mapInstance.current.setView([loc.lat, loc.lon], 9);
+          if (markerRef.current) {
+            markerRef.current.setLatLng([loc.lat, loc.lon]);
+          }
+        }
+        loadScorecard(loc);
+      };
+
       useEffect(() => {
-        loadScorecard();
+        if (!mapRef.current || mapInstance.current) return;
+
+        const map = L.map(mapRef.current).setView([-0.8, 33.6], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        mapInstance.current = map;
+
+        const marker = L.marker([selectedLocation.lat, selectedLocation.lon]).addTo(map);
+        markerRef.current = marker;
+
+        map.on('click', (e) => {
+          const { lat, lng } = e.latlng;
+          const locName = \`Point (\${lat.toFixed(3)}°, \${lng.toFixed(3)}°)\`;
+          const customLoc = { name: locName, lat, lon: lng };
+          marker.setLatLng([lat, lng]);
+          setSelectedLocation(customLoc);
+          loadScorecard(customLoc);
+        });
+
+        loadScorecard(selectedLocation);
       }, []);
 
       return (
@@ -276,21 +314,21 @@ const bundleHTML = `<!DOCTYPE html>
           </header>
 
           <section className="lean-card">
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Select Location</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ fontSize: '0.75rem', fontHigh: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
+              Interactive Map & Hotspot Selector (Click anywhere on Lake Victoria)
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
               {hotspots.map(h => (
                 <button
                   key={h.name}
-                  onClick={() => {
-                    setSelectedLocation(h);
-                    loadScorecard(h);
-                  }}
+                  onClick={() => handleLocationSelect(h)}
                   className={\`pill-btn \${selectedLocation.name === h.name ? 'active' : ''}\`}
                 >
                   📍 {h.name}
                 </button>
               ))}
             </div>
+            <div ref={mapRef} className="map-container"></div>
           </section>
 
           <section>
@@ -308,4 +346,4 @@ const bundleHTML = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
-console.log('Successfully compiled React 18 production bundle to frontend/out/index.html');
+console.log('Successfully compiled React 18 Leaflet Map bundle to frontend/out/index.html');
