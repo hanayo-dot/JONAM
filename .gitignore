@@ -1,0 +1,15 @@
+# Executables
+*.exe
+api/api
+
+# Environment variables
+.env
+
+# Dependencies & Build outputs
+node_modules/
+.next/
+dist/
+
+# System files
+.DS_Store
+Thumbs.db
