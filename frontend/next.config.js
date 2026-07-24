@@ -1,17 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*',
-      },
-      {
-        source: '/detect',
-        destination: 'http://localhost:8080/detect',
-      },
-    ]
+  output: 'export',
+  images: {
+    unoptimized: true,
   },
 }
 

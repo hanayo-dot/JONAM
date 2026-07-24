@@ -8,7 +8,11 @@ import numpy as np
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 
-app = Flask(__name__, static_folder='frontend', static_url_path='')
+frontend_dir = os.path.join(os.path.dirname(__file__), 'frontend', 'out')
+if not os.path.exists(frontend_dir):
+    frontend_dir = os.path.join(os.path.dirname(__file__), 'frontend')
+
+app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
 CORS(app)
 
 # Load environment variables
@@ -70,7 +74,7 @@ if not KIJANI_TOKEN and KIJANI_USER and KIJANI_PASS:
 # --- Static Frontend Routes ---
 @app.route('/')
 def index():
-    return send_from_directory('frontend', 'index.html')
+    return send_from_directory(frontend_dir, 'index.html')
 
 @app.route('/health')
 def health():

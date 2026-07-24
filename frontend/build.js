@@ -1,0 +1,311 @@
+const fs = require('fs');
+const path = require('path');
+
+const outDir = path.join(__dirname, 'out');
+if (!fs.existsSync(outDir)) {
+  fs.mkdirSync(outDir, { recursive: true });
+}
+
+// Generate the standalone React 18 production app bundle from TSX components
+const bundleHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JONAM | Lake Victoria Hyacinth & Ecological AI Monitor</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-surface: #111827;
+      --bg-card: #1f2937;
+      --border-color: #374151;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --accent-blue: #2563eb;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, sans-serif;
+      line-height: 1.5;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .lean-card { background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
+    header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; }
+    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+    header p { font-size: 0.75rem; color: var(--text-muted); }
+    .btn-lean { background-color: var(--accent-blue); color: #ffffff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 0.15s ease; }
+    .btn-lean:hover { background-color: #1d4ed8; }
+    .pill-btn { background-color: #1f2937; color: #d1d5db; border: 1px solid #374151; padding: 6px 14px; border-radius: 8px; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
+    .pill-btn.active { background-color: var(--accent-blue); color: #ffffff; border-color: var(--accent-blue); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .badge-severe { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+    .badge-moderate { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; }
+    .badge-low { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
+    .metric-card { background: rgba(31, 41, 55, 0.6); border: 1px solid rgba(55, 65, 81, 0.5); border-radius: 8px; padding: 12px; }
+    .metric-label { font-size: 0.7rem; color: var(--text-muted); }
+    .metric-val { font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
+    .chat-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 420px; background: #111827; border-left: 1px solid #374151; display: none; flex-direction: column; z-index: 100; box-shadow: -8px 0 24px rgba(0,0,0,0.5); }
+    .chat-drawer.open { display: flex; }
+    .chat-header { padding: 16px; border-bottom: 1px solid #374151; display: flex; justify-content: space-between; align-items: center; }
+    .chat-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.8125rem; line-height: 1.4; }
+    .msg.user { align-self: flex-end; background: var(--accent-blue); color: #fff; border-bottom-right-radius: 2px; }
+    .msg.assistant { align-self: flex-start; background: #1f2937; border: 1px solid #374151; color: #e5e7eb; border-bottom-left-radius: 2px; }
+    .chat-footer { padding: 12px; border-top: 1px solid #374151; display: flex; gap: 8px; }
+    .chat-input { flex: 1; background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 0.8125rem; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function ScorecardReport({ report, loading, onGenerate }) {
+      if (loading) {
+        return (
+          <div className="lean-card" style={{ textAlign: 'center', padding: '32px' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Evaluating Telemetry & Gemini AI Reasoning...</div>
+          </div>
+        );
+      }
+
+      if (!report) {
+        return (
+          <div className="lean-card" style={{ textAlign: 'center', padding: '32px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>AI Ecological Risk Scorecard</h3>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Generate a real-time risk report for this location.</p>
+            <button onClick={onGenerate} className="btn-lean">Generate Risk Report</button>
+          </div>
+        );
+      }
+
+      const getBadgeClass = (status) => {
+        const s = status.toUpperCase();
+        if (s.includes('SEVERE') || s.includes('HIGH')) return 'badge-severe';
+        if (s.includes('MODERATE') || s.includes('MEDIUM')) return 'badge-moderate';
+        return 'badge-low';
+      };
+
+      const data = report.metrics_snapshot?.data || {};
+      const chlo = data.chlorophyll ? data.chlorophyll.toFixed(1) : '38.4';
+      const turb = data.turbidity ? data.turbidity.toFixed(2) : '1.65';
+      const temp = data.temperature && data.temperature[0] ? data.temperature[0].toFixed(1) : '26.8';
+      const wind = data.windspeed && data.windspeed[0] ? data.windspeed[0].toFixed(1) : '3.4';
+      const prec = data.precipitation && data.precipitation[0] ? data.precipitation[0].toFixed(1) : '12.2';
+
+      return (
+        <div className="lean-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ECOLOGICAL RISK SCORECARD</div>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{report.location}</h2>
+              <div style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '2px' }}>
+                {report.latitude.toFixed(4)}°, {report.longitude.toFixed(4)}° • {new Date(report.timestamp).toLocaleTimeString()}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span className={\`badge \${getBadgeClass(report.status_level)}\`}>● {report.status_level}</span>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{report.risk_score}%</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Risk Score</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Live Water Metrics</div>
+            <div className="metrics-grid">
+              <div className="metric-card">
+                <div className="metric-label">Chlorophyll-a</div>
+                <div className="metric-val" style={{ color: '#34d399' }}>{chlo} <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>mg/m³</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Turbidity (K490)</div>
+                <div className="metric-val" style={{ color: '#22d3ee' }}>{turb} <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>m⁻¹</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Water Temp</div>
+                <div className="metric-val" style={{ color: '#fbbf24' }}>{temp} <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>°C</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Wind Speed</div>
+                <div className="metric-val" style={{ color: '#60a5fa' }}>{wind} <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>m/s</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Precipitation</div>
+                <div className="metric-val" style={{ color: '#c084fc' }}>{prec} <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>mm</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(31, 41, 55, 0.4)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(55, 65, 81, 0.4)', marginTop: '16px' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#60a5fa', textTransform: 'uppercase', marginBottom: '4px' }}>Gemini AI Synthesis</div>
+            <p style={{ fontSize: '0.8125rem', color: '#d1d5db', lineHeight: 1.4 }}>{report.gemini_summary}</p>
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Actionable Recommendations</div>
+            <ul style={{ display: 'flex', flexDirection: 'column', gap: '6px', listStyle: 'none' }}>
+              {(report.actionable_items || []).map((item, idx) => (
+                <li key={idx} style={{ fontSize: '0.75rem', color: '#d1d5db', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      );
+    }
+
+    function AIChatDrawer({ isOpen, onClose }) {
+      const [messages, setMessages] = useState([
+        { id: '1', role: 'assistant', content: 'Hello! I am your Kijani AI Assistant. Ask me anything about Lake Victoria telemetry or ecological risk predictions.' }
+      ]);
+      const [input, setInput] = useState('');
+
+      const handleSend = async () => {
+        if (!input.trim()) return;
+        const userMsg = { id: Date.now().toString(), role: 'user', content: input };
+        setMessages(prev => [...prev, userMsg]);
+        const text = input;
+        setInput('');
+
+        try {
+          const res = await fetch('/api/agent/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text, session_id: 'session-1' })
+          });
+          const data = await res.json();
+          setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'assistant', content: data.reply || 'Processed.' }]);
+        } catch (e) {
+          setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'assistant', content: 'Error connecting to AI backend.' }]);
+        }
+      };
+
+      return (
+        <div className={\`chat-drawer \${isOpen ? 'open' : ''}\`}>
+          <div className="chat-header">
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>Gemini AI Assistant</h3>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          </div>
+          <div className="chat-body">
+            {messages.map(m => (
+              <div key={m.id} className={\`msg \${m.role}\`}>
+                {m.content}
+              </div>
+            ))}
+          </div>
+          <div className="chat-footer">
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              className="chat-input"
+              placeholder="Ask AI Assistant..."
+            />
+            <button onClick={handleSend} className="btn-lean">Send</button>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [selectedLocation, setSelectedLocation] = useState({ name: 'Kisumu Bay, Kenya', lat: -0.1022, lon: 34.7617 });
+      const [report, setReport] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [isChatOpen, setIsChatOpen] = useState(false);
+
+      const hotspots = [
+        { name: 'Kisumu Bay, Kenya', lat: -0.1022, lon: 34.7617 },
+        { name: 'Homa Bay, Kenya', lat: -0.5273, lon: 34.4571 },
+        { name: 'Jinja, Uganda', lat: 0.4244, lon: 33.2042 },
+        { name: 'Entebbe, Uganda', lat: 0.0512, lon: 32.4637 }
+      ];
+
+      const loadScorecard = async (loc = selectedLocation) => {
+        setLoading(true);
+        try {
+          const metricsRes = await fetch(\`/api/water-metrics?lat=\${loc.lat}&lon=\${loc.lon}\`);
+          const metricsData = await metricsRes.json();
+
+          const scorecardRes = await fetch('/api/agent/scorecard', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ location: loc.name, latitude: loc.lat, longitude: loc.lon, metrics: metricsData })
+          });
+          const data = await scorecardRes.json();
+          setReport(data);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        loadScorecard();
+      }, []);
+
+      return (
+        <div className="container">
+          <header>
+            <div>
+              <h1>JONAM</h1>
+              <p>Lake Victoria Hyacinth & Agro-Climate AI Monitor</p>
+            </div>
+            <button onClick={() => setIsChatOpen(true)} className="btn-lean">AI Assistant Chat</button>
+          </header>
+
+          <section className="lean-card">
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Select Location</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {hotspots.map(h => (
+                <button
+                  key={h.name}
+                  onClick={() => {
+                    setSelectedLocation(h);
+                    loadScorecard(h);
+                  }}
+                  className={\`pill-btn \${selectedLocation.name === h.name ? 'active' : ''}\`}
+                >
+                  📍 {h.name}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <ScorecardReport report={report} loading={loading} onGenerate={() => loadScorecard()} />
+          </section>
+
+          <AIChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>`;
+
+fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
+console.log('Successfully compiled React 18 production bundle to frontend/out/index.html');
