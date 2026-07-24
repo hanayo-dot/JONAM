@@ -9,6 +9,8 @@ api/api
 node_modules/
 .next/
 dist/
+__pycache__/
+*.pyc
 
 # System files
 .DS_Store
