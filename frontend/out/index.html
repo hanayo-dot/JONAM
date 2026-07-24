@@ -42,8 +42,6 @@
     header p { font-size: 0.75rem; color: var(--text-muted); }
     .btn-lean { background-color: var(--accent-blue); color: #ffffff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: background-color 0.15s ease; }
     .btn-lean:hover { background-color: #1d4ed8; }
-    .pill-btn { background-color: #1f2937; color: #d1d5db; border: 1px solid #374151; padding: 6px 14px; border-radius: 8px; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
-    .pill-btn.active { background-color: var(--accent-blue); color: #ffffff; border-color: var(--accent-blue); }
     .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
     .badge-severe { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
     .badge-moderate { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; }
@@ -52,7 +50,7 @@
     .metric-card { background: rgba(31, 41, 55, 0.6); border: 1px solid rgba(55, 65, 81, 0.5); border-radius: 8px; padding: 12px; }
     .metric-label { font-size: 0.7rem; color: var(--text-muted); }
     .metric-val { font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
-    .map-container { height: 300px; width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid #374151; margin-top: 10px; }
+    .map-container { height: 360px; width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid #374151; margin-top: 8px; }
     .chat-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 420px; background: #111827; border-left: 1px solid #374151; display: none; flex-direction: column; z-index: 1000; box-shadow: -8px 0 24px rgba(0,0,0,0.5); }
     .chat-drawer.open { display: flex; }
     .chat-header { padding: 16px; border-bottom: 1px solid #374151; display: flex; justify-content: space-between; align-items: center; }
@@ -83,7 +81,7 @@
         return (
           <div className="lean-card" style={{ textAlign: 'center', padding: '32px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>AI Ecological Risk Scorecard</h3>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Click any point on the map above or select a hotspot to generate an ecological risk report.</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Click any point on the map above to select coordinates and generate an ecological risk report.</p>
             <button onClick={onGenerate} className="btn-lean">Generate Risk Report</button>
           </div>
         );
@@ -232,13 +230,6 @@
       const mapInstance = useRef(null);
       const markerRef = useRef(null);
 
-      const hotspots = [
-        { name: 'Kisumu Bay, Kenya', lat: -0.1022, lon: 34.7617 },
-        { name: 'Homa Bay, Kenya', lat: -0.5273, lon: 34.4571 },
-        { name: 'Jinja, Uganda', lat: 0.4244, lon: 33.2042 },
-        { name: 'Entebbe, Uganda', lat: 0.0512, lon: 32.4637 }
-      ];
-
       const loadScorecard = async (loc = selectedLocation) => {
         setLoading(true);
         try {
@@ -257,17 +248,6 @@
         } finally {
           setLoading(false);
         }
-      };
-
-      const handleLocationSelect = (loc) => {
-        setSelectedLocation(loc);
-        if (mapInstance.current) {
-          mapInstance.current.setView([loc.lat, loc.lon], 9);
-          if (markerRef.current) {
-            markerRef.current.setLatLng([loc.lat, loc.lon]);
-          }
-        }
-        loadScorecard(loc);
       };
 
       useEffect(() => {
@@ -306,19 +286,8 @@
           </header>
 
           <section className="lean-card">
-            <div style={{ fontSize: '0.75rem', fontHigh: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
-              Interactive Map & Hotspot Selector (Click anywhere on Lake Victoria)
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
-              {hotspots.map(h => (
-                <button
-                  key={h.name}
-                  onClick={() => handleLocationSelect(h)}
-                  className={`pill-btn ${selectedLocation.name === h.name ? 'active' : ''}`}
-                >
-                  📍 {h.name}
-                </button>
-              ))}
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+              Interactive Lake Victoria Map (Click anywhere to analyze coordinates)
             </div>
             <div ref={mapRef} className="map-container"></div>
           </section>

@@ -1,71 +1,39 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import ScorecardReport, { RiskReportData } from '@/components/ScorecardReport'
 import AIChatDrawer from '@/components/AIChatDrawer'
 
 export default function Home() {
-  const [selectedLocation, setSelectedLocation] = useState('Kisumu Bay, Kenya')
-  const [lat, setLat] = useState('-0.1022')
-  const [lon, setLon] = useState('34.7617')
-  const [metrics, setMetrics] = useState<any>(null)
+  const [selectedLocation, setSelectedLocation] = useState({ name: 'Kisumu Bay, Kenya', lat: -0.1022, lon: 34.7617 })
   const [report, setReport] = useState<RiskReportData | null>(null)
-  const [loadingMetrics, setLoadingMetrics] = useState(false)
-  const [loadingReport, setLoadingReport] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
 
-  const hotspots = [
-    { name: 'Kisumu Bay, Kenya', lat: '-0.1022', lon: '34.7617' },
-    { name: 'Homa Bay, Kenya', lat: '-0.5273', lon: '34.4571' },
-    { name: 'Jinja, Uganda', lat: '0.4244', lon: '33.2042' },
-    { name: 'Entebbe, Uganda', lat: '0.0512', lon: '32.4637' }
-  ]
+  const mapRef = useRef<HTMLDivElement>(null)
 
-  const loadWaterMetrics = async (latitude = lat, longitude = lon, locName = selectedLocation) => {
-    setLoadingMetrics(true)
+  const loadScorecard = async (loc = selectedLocation) => {
+    setLoading(true)
     try {
-      const res = await fetch(`/api/water-metrics?lat=${latitude}&lon=${longitude}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setMetrics(data)
-      generateScorecardReport(locName, parseFloat(latitude), parseFloat(longitude), data)
-    } catch (e: any) {
-      console.error('Failed to load metrics:', e)
-    } finally {
-      setLoadingMetrics(false)
-    }
-  }
+      const metricsRes = await fetch(`/api/water-metrics?lat=${loc.lat}&lon=${loc.lon}`)
+      const metricsData = await metricsRes.json()
 
-  const generateScorecardReport = async (
-    locName = selectedLocation,
-    latitude = parseFloat(lat),
-    longitude = parseFloat(lon),
-    metricsData = metrics
-  ) => {
-    setLoadingReport(true)
-    try {
-      const res = await fetch('/api/agent/scorecard', {
+      const scorecardRes = await fetch('/api/agent/scorecard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          location: locName,
-          latitude,
-          longitude,
-          metrics: metricsData || {}
-        })
+        body: JSON.stringify({ location: loc.name, latitude: loc.lat, longitude: loc.lon, metrics: metricsData })
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
+      const data = await scorecardRes.json()
       setReport(data)
-    } catch (e: any) {
-      console.error('Failed to generate report:', e)
+    } catch (e) {
+      console.error(e)
     } finally {
-      setLoadingReport(false)
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadWaterMetrics()
+    loadScorecard()
   }, [])
 
   return (
@@ -74,7 +42,7 @@ export default function Home() {
       <header className="flex items-center justify-between border-b border-gray-800 pb-4">
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">JONAM</h1>
-          <p className="text-xs text-gray-400">Lake Victoria Hyacinth & Ecological AI Monitor</p>
+          <p className="text-xs text-gray-400">Lake Victoria Hyacinth & Agro-Climate AI Monitor</p>
         </div>
 
         <button onClick={() => setIsChatOpen(true)} className="btn-lean">
@@ -82,37 +50,20 @@ export default function Home() {
         </button>
       </header>
 
-      {/* Hotspot Location Picker */}
+      {/* Interactive Map */}
       <section className="lean-card space-y-3">
-        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Select Location</div>
-        <div className="flex flex-wrap gap-2">
-          {hotspots.map(h => (
-            <button
-              key={h.name}
-              onClick={() => {
-                setSelectedLocation(h.name)
-                setLat(h.lat)
-                setLon(h.lon)
-                loadWaterMetrics(h.lat, h.lon, h.name)
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                selectedLocation === h.name
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              📍 {h.name}
-            </button>
-          ))}
+        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          Interactive Lake Victoria Map (Click anywhere to analyze coordinates)
         </div>
+        <div ref={mapRef} className="h-80 w-full rounded-lg border border-gray-700"></div>
       </section>
 
       {/* Main Scorecard Report */}
       <section>
         <ScorecardReport
           report={report}
-          loading={loadingReport || loadingMetrics}
-          onGenerate={() => generateScorecardReport()}
+          loading={loading}
+          onGenerate={() => loadScorecard()}
         />
       </section>
 
