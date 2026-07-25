@@ -45,4 +45,4 @@ Notes and next steps:
 - Replace the simple RGB heuristic with an index-based approach using Sentinel-2 bands (NDVI, NDWI) or a small segmentation model for higher accuracy.
 - Use the Kijanibox STAC proxy (`/proxy/stac?path=/collections/...`) to search and fetch assets programmatically; set `KIJANI_API_KEY` in the API container environment.
 - Add change-detection by comparing masks across a configurable lookback window.
-# kijani
+# Jonam inc
