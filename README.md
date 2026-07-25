@@ -118,3 +118,6 @@ npm run dev
 ```
 
 ---
+
+## 🌐 Production Deployment
+The project is configured for seamless static & containerized deployment:
