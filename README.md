@@ -99,3 +99,13 @@ docker build -t jonam-risk-assessment .
 # Run container
 docker run -p 8080:8080 --env-file .env jonam-risk-assessment
 ```
+
+Open [http://localhost:8080](http://localhost:8080) in your browser.
+
+### 3. Running Locally (Development Mode)
+
+#### Backend (Python Flask)
+```bash
+pip install -r requirements.txt
+python app.py
+```
