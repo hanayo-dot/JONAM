@@ -31,8 +31,6 @@ load_env()
 KIJANI_BASE = os.getenv('KIJANI_API_BASE', 'https://api.kijanispace.eu')
 KIJANI_API_KEY = os.getenv('KIJANI_API_KEY', '')
 KIJANI_TOKEN = os.getenv('KIJANI_ACCESS_TOKEN', '')
-KIJANI_USER = os.getenv('KIJANI_USERNAME', '')
-KIJANI_PASS = os.getenv('KIJANI_PASSWORD', '')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyCaqQ8WPJxy0RRb3_k1mveCo1Ofl2lhFVA')
 
 MEMORY_STORE = {
@@ -174,7 +172,7 @@ def handle_water_metrics():
     return jsonify(generate_dynamic_telemetry(lat, lon))
 
 
-# --- AI Agent Reasoning Engine ---
+# --- Synergistic AI Agent Reasoning Engine ---
 def call_agent_llm(prompt: str) -> str:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
@@ -193,7 +191,7 @@ def call_agent_llm(prompt: str) -> str:
 @app.route('/api/agent/scorecard', methods=['POST'])
 def handle_scorecard():
     req_data = request.get_json(force=True) or {}
-    loc_name = req_data.get('location', 'Selected Coordinate')
+    loc_name = req_data.get('location', 'Selected Map Point')
     try:
         lat = float(req_data.get('latitude', -0.1022))
         lon = float(req_data.get('longitude', 34.7617))
@@ -206,16 +204,19 @@ def handle_scorecard():
             "location": loc_name,
             "latitude": lat,
             "longitude": lon,
-            "risk_score": 0,
+            "hyacinth_risk_score": 0,
+            "fish_vulnerability_score": 0,
             "status_level": "INLAND (N/A)",
             "metrics_snapshot": {
                 "is_water": False,
                 "data": {"chlorophyll": None, "turbidity": None, "temperature": [24.0], "windspeed": [3.0], "precipitation": [0.0]}
             },
-            "agent_summary": f"Selected coordinate ({lat:.4f}°, {lon:.4f}°) is on dry terrestrial land outside Lake Victoria water boundaries. Water hyacinth proliferation risk is Not Applicable (0%).",
-            "actionable_items": [
-                "Click a coordinate within Lake Victoria or coastal bay waters to analyze water hyacinth proliferation risk.",
-                "Ensure map pins are placed in aquatic or bay regions."
+            "synergistic_summary": f"Selected coordinate ({lat:.4f}°, {lon:.4f}°) is located on dry terrestrial land outside Lake Victoria water boundaries. Hyacinth proliferation and fish stock impact are Not Applicable (0%).",
+            "hyacinth_control_actions": [
+                "Select aquatic coordinates inside Lake Victoria to evaluate weed proliferation."
+            ],
+            "fish_stock_actions": [
+                "Ensure map pins are placed in lake waters or breeding bays."
             ],
             "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
         }
@@ -231,8 +232,8 @@ def handle_scorecard():
     wind = m_data.get('windspeed', [3.0])[0] if isinstance(m_data.get('windspeed'), list) else 3.0
     precip = m_data.get('precipitation', [10.0])[0] if isinstance(m_data.get('precipitation'), list) else 10.0
 
-    prompt = f"""You are the Kijani AI Ecological Risk Agent for Lake Victoria.
-Analyze the following live telemetry for location "{loc_name}" (Lat: {lat:.4f}, Lon: {lon:.4f}):
+    prompt = f"""You are the lead limnologist and Machine Learning advisor for the Pollution Risk Assessment Model.
+Analyze live telemetry for Lake Victoria coordinate "{loc_name}" (Lat: {lat:.4f}, Lon: {lon:.4f}):
 
 Parameters:
 - Chlorophyll-a: {chlo} mg/m³
@@ -241,14 +242,23 @@ Parameters:
 - Wind Speed: {wind} m/s
 - Precipitation: {precip} mm
 
-Calculate the Hyacinth Proliferation Risk Score (0 - 100%). Return strictly JSON:
+Compute dual risk scores (0 - 100%):
+1. Hyacinth Risk Score:Driven by high Chlorophyll (>40 mg/m³) and warm water (>27°C).
+2. Fish Stock Vulnerability Score: Driven by high Turbidity (>1.5 m⁻¹) and decaying weed mat hypoxia.
+
+Return strictly JSON:
 {{
-  "risk_score": 78,
+  "hyacinth_risk_score": 78,
+  "fish_vulnerability_score": 82,
   "status_level": "SEVERE RISK",
-  "summary": "Detailed 2-sentence ecological evaluation by AI Agent.",
-  "action_items": [
-    "Action item 1",
-    "Action item 2"
+  "summary": "Explain synergistically how nutrient pollution drives hyacinth mat growth AND blocks light/oxygen for Tilapia & Nile Perch spawning grounds.",
+  "hyacinth_control_actions": [
+    "Deploy physical containment booms around harbor entry point",
+    "Schedule targeted mechanical weed harvesting in dense mat sectors"
+  ],
+  "fish_stock_actions": [
+    "Declare temporary eco-protection zone for juvenile Tilapia breeding nursery",
+    "Monitor dissolved oxygen levels near littoral fishing grounds"
   ]
 }}"""
 
@@ -258,16 +268,22 @@ Calculate the Hyacinth Proliferation Risk Score (0 - 100%). Return strictly JSON
         parsed = json.loads(cleaned)
     except Exception as e:
         print(f"AI Agent call fallback: {e}")
-        risk_score = min(98, max(15, int(chlo * 0.9 + turb * 8 + (temp - 22) * 4)))
-        status = "SEVERE RISK" if risk_score >= 75 else ("MODERATE RISK" if risk_score >= 45 else "LOW RISK")
+        h_risk = min(98, max(15, int(chlo * 0.9 + (temp - 22) * 4)))
+        f_risk = min(98, max(15, int(turb * 22 + chlo * 0.45)))
+        status = "SEVERE RISK" if (h_risk >= 75 or f_risk >= 75) else ("MODERATE RISK" if (h_risk >= 45 or f_risk >= 45) else "LOW RISK")
 
         parsed = {
-            "risk_score": risk_score,
+            "hyacinth_risk_score": h_risk,
+            "fish_vulnerability_score": f_risk,
             "status_level": status,
-            "summary": f"Telemetry at ({lat:.4f}°, {lon:.4f}°) shows Chlorophyll-a at {chlo} mg/m³ and Turbidity $K_{{490}}$ at {turb} m⁻¹, driving a {status.lower()} for hyacinth proliferation.",
-            "action_items": [
-                f"Monitor floating vegetation mat movement near ({lat:.2f}°, {lon:.2f}°)",
-                "Deploy physical containment booms around sensitive harbor entries"
+            "summary": f"High nutrient loads (Chlorophyll-a {chlo} mg/m³) accelerate water hyacinth mat expansion while elevated Turbidity ({turb} m⁻¹) restricts sunlight penetration, stressing local Tilapia and Nile Perch nursery habitats.",
+            "hyacinth_control_actions": [
+                f"Deploy physical containment barriers near coordinates ({lat:.2f}°, {lon:.2f}°)",
+                "Mobilize mechanical harvesters before wind vectors drift mats into transport channels"
+            ],
+            "fish_stock_actions": [
+                "Establish temporary non-fishing conservation zones in vulnerable littoral breeding bays",
+                "Deploy real-time dissolved oxygen sensors to protect juvenile fish stocks"
             ]
         }
 
@@ -276,11 +292,13 @@ Calculate the Hyacinth Proliferation Risk Score (0 - 100%). Return strictly JSON
         "location": loc_name,
         "latitude": lat,
         "longitude": lon,
-        "risk_score": parsed.get("risk_score", 65),
+        "hyacinth_risk_score": parsed.get("hyacinth_risk_score", 70),
+        "fish_vulnerability_score": parsed.get("fish_vulnerability_score", 75),
         "status_level": parsed.get("status_level", "MODERATE RISK"),
         "metrics_snapshot": metrics,
-        "agent_summary": parsed.get("summary", ""),
-        "actionable_items": parsed.get("action_items", []),
+        "synergistic_summary": parsed.get("summary", ""),
+        "hyacinth_control_actions": parsed.get("hyacinth_control_actions", []),
+        "fish_stock_actions": parsed.get("fish_stock_actions", []),
         "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
     }
 
@@ -297,20 +315,20 @@ def handle_chat():
     if not message:
         return jsonify({'error': 'message required'}), 400
 
-    prompt = f"""You are the Kijani AI Agent, an autonomous ecological risk advisor for Lake Victoria.
-Answer the user's question with actionable environmental insight:
+    prompt = f"""You are the ML Decision Assistant for the Pollution Risk Assessment Model.
+Answer the user question about Hyacinth Proliferation and Declining Fish Stock synergy:
 
-User Question: {message}"""
+Question: {message}"""
 
     try:
         reply = call_agent_llm(prompt)
     except Exception as e:
-        reply = "I am an AI Agent operating in offline mode. Please refer to our live Water Metrics and AI Risk Scorecard for Lake Victoria telemetry."
+        reply = "I am operating in offline mode. Select any map location to run ML inference on Hyacinth Control & Fish Stock Protection."
 
     return jsonify({'reply': reply, 'session_id': session_id})
 
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
-    print(f"Starting JONAM Single-Server Python AI Agent Backend on http://0.0.0.0:{port}")
+    print(f"Starting Pollution Risk Assessment Model Server on http://0.0.0.0:{port}")
     app.run(host='0.0.0.0', port=port, debug=False)
