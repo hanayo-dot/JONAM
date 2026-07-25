@@ -51,25 +51,16 @@ def get_auth_headers():
 def has_kijani_auth():
     return bool(KIJANI_API_KEY or KIJANI_TOKEN)
 
-# Check if coordinate is inside Lake Victoria water body boundary
 def is_lake_victoria_water(lat_val: float, lon_val: float) -> bool:
-    # Lake Victoria boundaries: Lat -3.05 to 0.55, Lon 31.70 to 34.85
     if not (-3.10 <= lat_val <= 0.60 and 31.65 <= lon_val <= 34.90):
         return False
-    
-    # West shore boundary check (e.g., Lon < 31.75 at Lat < -1.0 is inland Tanzania/Uganda)
     if lon_val < 31.75 and lat_val < -0.5:
         return False
-
-    # East/South land boundary checks
     if lon_val > 34.80 and lat_val < -1.5:
         return False
-        
     return True
 
-# Dynamic Spatial Telemetry Engine
 def generate_dynamic_telemetry(lat_val: float, lon_val: float):
-    # Check if point is on land
     if not is_lake_victoria_water(lat_val, lon_val):
         return {
             "is_water": False,
@@ -84,7 +75,6 @@ def generate_dynamic_telemetry(lat_val: float, lon_val: float):
             }
         }
 
-    # Deterministic spatial seed
     seed = math.sin(lat_val * 12.9898 + lon_val * 78.233) * 43758.5453
     rand_val = abs(seed - math.floor(seed))
     rand_val2 = abs(math.sin(seed) * 1000 - math.floor(math.sin(seed) * 1000))
@@ -184,20 +174,20 @@ def handle_water_metrics():
     return jsonify(generate_dynamic_telemetry(lat, lon))
 
 
-# --- Gemini AI Reasoning Engine ---
-def call_gemini_api(prompt: str) -> str:
+# --- AI Agent Reasoning Engine ---
+def call_agent_llm(prompt: str) -> str:
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     r = requests.post(url, json=payload, timeout=25)
     if r.status_code != 200:
-        raise Exception(f"Gemini API status {r.status_code}: {r.text}")
+        raise Exception(f"AI Agent API status {r.status_code}: {r.text}")
     data = r.json()
     candidates = data.get('candidates', [])
     if candidates and 'content' in candidates[0]:
         parts = candidates[0]['content'].get('parts', [])
         if parts:
             return parts[0].get('text', '')
-    raise Exception("Empty output from Gemini API")
+    raise Exception("Empty output from AI Agent API")
 
 
 @app.route('/api/agent/scorecard', methods=['POST'])
@@ -210,7 +200,6 @@ def handle_scorecard():
     except (ValueError, TypeError):
         lat, lon = -0.1022, 34.7617
 
-    # Inland land check
     if not is_lake_victoria_water(lat, lon):
         report = {
             "id": f"rep-{int(time.time()*1000)}",
@@ -223,7 +212,7 @@ def handle_scorecard():
                 "is_water": False,
                 "data": {"chlorophyll": None, "turbidity": None, "temperature": [24.0], "windspeed": [3.0], "precipitation": [0.0]}
             },
-            "gemini_summary": f"Selected coordinate ({lat:.4f}°, {lon:.4f}°) is on dry terrestrial land outside Lake Victoria water boundaries. Water hyacinth proliferation risk is Not Applicable (0%).",
+            "agent_summary": f"Selected coordinate ({lat:.4f}°, {lon:.4f}°) is on dry terrestrial land outside Lake Victoria water boundaries. Water hyacinth proliferation risk is Not Applicable (0%).",
             "actionable_items": [
                 "Click a coordinate within Lake Victoria or coastal bay waters to analyze water hyacinth proliferation risk.",
                 "Ensure map pins are placed in aquatic or bay regions."
@@ -242,7 +231,7 @@ def handle_scorecard():
     wind = m_data.get('windspeed', [3.0])[0] if isinstance(m_data.get('windspeed'), list) else 3.0
     precip = m_data.get('precipitation', [10.0])[0] if isinstance(m_data.get('precipitation'), list) else 10.0
 
-    prompt = f"""You are an expert satellite limnologist for Lake Victoria.
+    prompt = f"""You are the Kijani AI Ecological Risk Agent for Lake Victoria.
 Analyze the following live telemetry for location "{loc_name}" (Lat: {lat:.4f}, Lon: {lon:.4f}):
 
 Parameters:
@@ -256,7 +245,7 @@ Calculate the Hyacinth Proliferation Risk Score (0 - 100%). Return strictly JSON
 {{
   "risk_score": 78,
   "status_level": "SEVERE RISK",
-  "summary": "Detailed 2-sentence limnological evaluation.",
+  "summary": "Detailed 2-sentence ecological evaluation by AI Agent.",
   "action_items": [
     "Action item 1",
     "Action item 2"
@@ -264,11 +253,11 @@ Calculate the Hyacinth Proliferation Risk Score (0 - 100%). Return strictly JSON
 }}"""
 
     try:
-        raw_text = call_gemini_api(prompt)
+        raw_text = call_agent_llm(prompt)
         cleaned = raw_text.strip().removeprefix('```json').removeprefix('```').removesuffix('```').strip()
         parsed = json.loads(cleaned)
     except Exception as e:
-        print(f"Gemini call fallback: {e}")
+        print(f"AI Agent call fallback: {e}")
         risk_score = min(98, max(15, int(chlo * 0.9 + turb * 8 + (temp - 22) * 4)))
         status = "SEVERE RISK" if risk_score >= 75 else ("MODERATE RISK" if risk_score >= 45 else "LOW RISK")
 
@@ -290,7 +279,7 @@ Calculate the Hyacinth Proliferation Risk Score (0 - 100%). Return strictly JSON
         "risk_score": parsed.get("risk_score", 65),
         "status_level": parsed.get("status_level", "MODERATE RISK"),
         "metrics_snapshot": metrics,
-        "gemini_summary": parsed.get("summary", ""),
+        "agent_summary": parsed.get("summary", ""),
         "actionable_items": parsed.get("action_items", []),
         "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
     }
@@ -308,20 +297,20 @@ def handle_chat():
     if not message:
         return jsonify({'error': 'message required'}), 400
 
-    prompt = f"""You are the Kijani AI Assistant, an ecological risk advisor for Lake Victoria.
+    prompt = f"""You are the Kijani AI Agent, an autonomous ecological risk advisor for Lake Victoria.
 Answer the user's question with actionable environmental insight:
 
 User Question: {message}"""
 
     try:
-        reply = call_gemini_api(prompt)
+        reply = call_agent_llm(prompt)
     except Exception as e:
-        reply = "I am operating in offline mode. Please refer to our live Water Metrics and AI Risk Scorecard for Lake Victoria telemetry."
+        reply = "I am an AI Agent operating in offline mode. Please refer to our live Water Metrics and AI Risk Scorecard for Lake Victoria telemetry."
 
     return jsonify({'reply': reply, 'session_id': session_id})
 
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8080))
-    print(f"Starting JONAM Single-Server Python Backend on http://0.0.0.0:{port}")
+    print(f"Starting JONAM Single-Server Python AI Agent Backend on http://0.0.0.0:{port}")
     app.run(host='0.0.0.0', port=port, debug=False)

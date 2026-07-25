@@ -11,7 +11,7 @@ const bundleHTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JONAM | Lake Victoria Hyacinth & Ecological AI Monitor</title>
+  <title>JONAM | Lake Victoria Hyacinth & Ecological AI Agent Monitor</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -81,7 +81,7 @@ const bundleHTML = `<!DOCTYPE html>
       if (loading) {
         return (
           <div className="lean-card" style={{ textAlign: 'center', padding: '32px' }}>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Evaluating Telemetry & Gemini AI Reasoning...</div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Evaluating Telemetry & AI Agent Reasoning...</div>
           </div>
         );
       }
@@ -110,10 +110,11 @@ const bundleHTML = `<!DOCTYPE html>
       const temp = data.temperature && data.temperature[0] ? data.temperature[0].toFixed(1) : '24.0';
       const wind = data.windspeed && data.windspeed[0] ? data.windspeed[0].toFixed(1) : '3.0';
       const prec = data.precipitation && data.precipitation[0] ? data.precipitation[0].toFixed(1) : '0.0';
+      const summaryText = report.agent_summary || report.gemini_summary || '';
 
       return (
         <div className="lean-card">
-          <div style={{ display: 'flex', justify: 'space-between', items: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
             <div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ECOLOGICAL RISK SCORECARD</div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{report.location}</h2>
@@ -157,8 +158,8 @@ const bundleHTML = `<!DOCTYPE html>
           </div>
 
           <div style={{ background: 'rgba(31, 41, 55, 0.4)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(55, 65, 81, 0.4)', marginTop: '16px' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#60a5fa', textTransform: 'uppercase', marginBottom: '4px' }}>Gemini AI Synthesis</div>
-            <p style={{ fontSize: '0.8125rem', color: '#d1d5db', lineHeight: 1.4 }}>{report.gemini_summary}</p>
+            <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#60a5fa', textTransform: 'uppercase', marginBottom: '4px' }}>AI Agent Ecological Synthesis</div>
+            <p style={{ fontSize: '0.8125rem', color: '#d1d5db', lineHeight: 1.4 }}>{summaryText}</p>
           </div>
 
           <div style={{ marginTop: '16px' }}>
@@ -178,7 +179,7 @@ const bundleHTML = `<!DOCTYPE html>
 
     function AIChatDrawer({ isOpen, onClose }) {
       const [messages, setMessages] = useState([
-        { id: '1', role: 'assistant', content: 'Hello! I am your Kijani AI Assistant. Ask me anything about Lake Victoria telemetry or ecological risk predictions.' }
+        { id: '1', role: 'assistant', content: 'Hello! I am your Kijani AI Agent. Ask me anything about Lake Victoria telemetry or ecological risk predictions.' }
       ]);
       const [input, setInput] = useState('');
 
@@ -198,14 +199,14 @@ const bundleHTML = `<!DOCTYPE html>
           const data = await res.json();
           setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'assistant', content: data.reply || 'Processed.' }]);
         } catch (e) {
-          setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'assistant', content: 'Error connecting to AI backend.' }]);
+          setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'assistant', content: 'Error connecting to AI Agent backend.' }]);
         }
       };
 
       return (
         <div className={\`chat-drawer \${isOpen ? 'open' : ''}\`}>
           <div className="chat-header">
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>Gemini AI Assistant</h3>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>Kijani AI Agent Assistant</h3>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
           </div>
           <div className="chat-body">
@@ -222,7 +223,7 @@ const bundleHTML = `<!DOCTYPE html>
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               className="chat-input"
-              placeholder="Ask AI Assistant..."
+              placeholder="Ask AI Agent..."
             />
             <button onClick={handleSend} className="btn-lean">Send</button>
           </div>
@@ -290,9 +291,9 @@ const bundleHTML = `<!DOCTYPE html>
           <header>
             <div>
               <h1>JONAM</h1>
-              <p>Lake Victoria Hyacinth & Agro-Climate AI Monitor</p>
+              <p>Lake Victoria Hyacinth & Agro-Climate AI Agent Monitor</p>
             </div>
-            <button onClick={() => setIsChatOpen(true)} className="btn-lean">AI Assistant Chat</button>
+            <button onClick={() => setIsChatOpen(true)} className="btn-lean">AI Agent Assistant</button>
           </header>
 
           <section className="lean-card">
@@ -317,4 +318,4 @@ const bundleHTML = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
-console.log('Successfully re-compiled React 18 Leaflet Map bundle with land boundary support to frontend/out/index.html');
+console.log('Successfully re-compiled React 18 Leaflet Map bundle with AI Agent branding to frontend/out/index.html');

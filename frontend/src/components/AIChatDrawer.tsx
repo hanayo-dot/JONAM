@@ -18,7 +18,7 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
     {
       id: 'init-1',
       role: 'assistant',
-      content: 'Hello! I am your Kijani AI Assistant. Ask me anything about Lake Victoria hyacinth proliferation, satellite STAC telemetry, water metrics, or ecological risk forecasts.'
+      content: 'Hello! I am your Kijani AI Agent. Ask me anything about Lake Victoria hyacinth proliferation, satellite telemetry, water parameters, or ecological risk forecasts.'
     }
   ])
   const [input, setInput] = useState('')
@@ -50,7 +50,7 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
       const assistantMsg: Message = {
         id: `a-${Date.now()}`,
         role: 'assistant',
-        content: data.reply || 'I processed your query against Lake Victoria telemetry.'
+        content: data.reply || 'Processed.'
       }
       setMessages(prev => [...prev, assistantMsg])
     } catch (e) {
@@ -59,7 +59,7 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
         {
           id: `err-${Date.now()}`,
           role: 'assistant',
-          content: 'Unable to connect to AI Assistant endpoint. Please verify backend service.'
+          content: 'Unable to connect to AI Agent endpoint. Please verify backend service.'
         }
       ])
     } finally {
@@ -76,18 +76,16 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-lg bg-slate-900 border-l border-slate-700/80 h-full flex flex-col shadow-2xl">
-        {/* Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
-            <h3 className="font-bold text-white text-lg">Kijani Gemini AI Assistant</h3>
+            <h3 className="font-bold text-white text-lg">Kijani AI Agent Assistant</h3>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg">
             ✕
           </button>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map(m => (
             <div
@@ -97,7 +95,7 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
               <div
                 className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
                   m.role === 'user'
-                    ? 'bg-cyan-600 text-white rounded-br-none'
+                    ? 'bg-blue-600 text-white rounded-br-none'
                     : 'bg-slate-800 border border-slate-700/60 text-slate-200 rounded-bl-none'
                 }`}
               >
@@ -109,12 +107,11 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
           {loading && (
             <div className="flex items-center gap-2 text-cyan-400 text-xs p-2">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-              Gemini is reasoning over telemetry...
+              AI Agent is reasoning over telemetry...
             </div>
           )}
         </div>
 
-        {/* Quick Prompts */}
         <div className="p-3 border-t border-slate-800 bg-slate-950/30 flex gap-2 overflow-x-auto">
           {quickPrompts.map((p, idx) => (
             <button
@@ -127,7 +124,6 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
           ))}
         </div>
 
-        {/* Input Form */}
         <div className="p-4 border-t border-slate-800 bg-slate-950">
           <form
             onSubmit={e => {
@@ -140,10 +136,10 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask AI Assistant about Lake Victoria..."
+              placeholder="Ask AI Agent..."
               className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500"
             />
-            <button type="submit" disabled={loading} className="btn-primary">
+            <button type="submit" disabled={loading} className="btn-lean">
               Send
             </button>
           </form>
