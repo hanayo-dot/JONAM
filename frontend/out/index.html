@@ -432,15 +432,16 @@
         await new Promise(resolve => setTimeout(resolve, 450));
 
         try {
+          const isJson = res => res.ok && res.headers.get('content-type')?.includes('application/json');
           const metricsRes = await fetch(`/api/water-metrics?lat=${lat}&lon=${lon}`);
-          if (metricsRes.ok) {
+          if (isJson(metricsRes)) {
             const metricsData = await metricsRes.json();
             const scorecardRes = await fetch('/api/agent/scorecard', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ location: locName, latitude: lat, longitude: lon, metrics: metricsData })
             });
-            if (scorecardRes.ok) {
+            if (isJson(scorecardRes)) {
               const data = await scorecardRes.json();
               setReport(data);
               setLoading(false);
