@@ -57,7 +57,7 @@ const bundleHTML = `<!DOCTYPE html>
     .hero-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid rgba(51, 65, 85, 0.6); padding-bottom: 20px; }
     .hero-title { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; background: linear-gradient(90deg, #60a5fa, #22d3ee, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .hero-subtitle { font-size: 0.875rem; color: #94a3b8; font-weight: 400; margin-top: 6px; max-width: 650px; line-height: 1.45; }
-    .btn-action { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: none; padding: 10px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.2s ease; }
+    .btn-action { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: none; padding: 10px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
     .btn-action:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45); }
     .synergy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
     .synergy-box { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
@@ -95,7 +95,6 @@ const bundleHTML = `<!DOCTYPE html>
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // Client Spatial Telemetry Generator
     const computeSpatialTelemetry = (lat, lon) => {
       if (!(-3.10 <= lat && lat <= 0.60 && 31.65 <= lon && lon <= 34.90) || (lon < 31.75 && lat < -0.5) || (lon > 34.80 && lat < -1.5)) {
         return {
@@ -218,7 +217,9 @@ const bundleHTML = `<!DOCTYPE html>
           <div className="presentation-card" style={{ textAlign: 'center', padding: '40px' }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Interactive Machine Learning Risk Inference</h3>
             <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '20px' }}>Click any point on Lake Victoria to evaluate risks for Hyacinth Control and Fish Stock Protection.</p>
-            <button onClick={onGenerate} className="btn-action">Run Risk Assessment Model</button>
+            <button onClick={() => onGenerate()} className="btn-action">
+              ⚡ Run Risk Assessment Model
+            </button>
           </div>
         );
       }
@@ -243,7 +244,7 @@ const bundleHTML = `<!DOCTYPE html>
 
       return (
         <div className="presentation-card">
-          <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(51, 65, 85, 0.6)', paddingBottom: '14px', marginBottom: '18px' }}>
+          <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(51, 65, 85, 0.6)', paddingBottom: '14px', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.05em' }}>ECOLOGICAL ML ASSESSMENT REPORT</div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>{report.location}</h2>
@@ -251,7 +252,12 @@ const bundleHTML = `<!DOCTYPE html>
                 Coordinates: {report.latitude.toFixed(4)}°, {report.longitude.toFixed(4)}° • Time: {new Date(report.timestamp).toLocaleTimeString()}
               </div>
             </div>
-            <span className={\`badge \${badgeClass}\`}>● {report.status_level}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span className={\`badge \${badgeClass}\`}>● {report.status_level}</span>
+              <button onClick={() => onGenerate()} className="btn-action" style={{ padding: '8px 14px', fontSize: '0.78rem' }}>
+                ⚡ Run Risk Assessment Model
+              </button>
+            </div>
           </div>
 
           <div className="dual-gauge">
@@ -398,9 +404,10 @@ const bundleHTML = `<!DOCTYPE html>
 
       const loadScorecard = async (loc = selectedLocation) => {
         setLoading(true);
-        const lat = loc.lat;
-        const lon = loc.lon;
-        
+        const lat = loc ? loc.lat : -0.1022;
+        const lon = loc ? loc.lon : 34.7617;
+        const locName = loc ? loc.name : 'Kisumu Bay, Kenya';
+
         try {
           const metricsRes = await fetch(\`/api/water-metrics?lat=\${lat}&lon=\${lon}\`);
           if (metricsRes.ok) {
@@ -408,7 +415,7 @@ const bundleHTML = `<!DOCTYPE html>
             const scorecardRes = await fetch('/api/agent/scorecard', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ location: loc.name, latitude: lat, longitude: lon, metrics: metricsData })
+              body: JSON.stringify({ location: locName, latitude: lat, longitude: lon, metrics: metricsData })
             });
             if (scorecardRes.ok) {
               const data = await scorecardRes.json();
@@ -418,14 +425,13 @@ const bundleHTML = `<!DOCTYPE html>
             }
           }
         } catch (e) {
-          // Backend API offline/standalone static mode
+          // Fallback to standalone client spatial inference engine
         }
 
-        // Fast Client Spatial ML Telemetry Inference
         const clientData = computeSpatialTelemetry(lat, lon);
         const reportObj = {
           id: 'rep-' + Date.now(),
-          location: loc.name,
+          location: locName,
           latitude: lat,
           longitude: lon,
           hyacinth_risk_score: clientData.hRisk,
@@ -466,14 +472,13 @@ const bundleHTML = `<!DOCTYPE html>
 
         map.on('click', (e) => {
           const { lat, lng } = e.latlng;
-          const locName = \`Lake Coordinate (\${lat.toFixed(3)}°, \${lng.toFixed(3)}°)\`;
-          const customLoc = { name: locName, lat, lon: lng };
+          const nameStr = \`Lake Coordinate (\${lat.toFixed(3)}°, \${lng.toFixed(3)}°)\`;
+          const customLoc = { name: nameStr, lat, lon: lng };
           marker.setLatLng([lat, lng]);
           setSelectedLocation(customLoc);
           loadScorecard(customLoc);
         });
 
-        // Auto-run initial spatial inference for Kisumu Bay on mount
         loadScorecard(selectedLocation);
       }, []);
 
@@ -492,7 +497,7 @@ const bundleHTML = `<!DOCTYPE html>
           </section>
 
           <section>
-            <ScorecardReport report={report} loading={loading} onGenerate={() => loadScorecard()} />
+            <ScorecardReport report={report} loading={loading} onGenerate={() => loadScorecard(selectedLocation)} />
           </section>
 
           <AIChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
@@ -506,4 +511,4 @@ const bundleHTML = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
-console.log('Successfully compiled standalone spatial inference bundle to frontend/out/index.html');
+console.log('Successfully added Run Risk Assessment Model action button directly inside populated report card');
