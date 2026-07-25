@@ -1,4 +1,4 @@
-# Kijani MVP - Lake Victoria Hyacinth & Pollution Detector
+# Jonam MVP - Lake Victoria Hyacinth & Pollution Detector
 
 This repository contains a minimal MVP for the hackathon: a Go backend that proxies Kijanibox STAC requests and forwards image detection jobs to a lightweight Python worker. The frontend is a simple static page served by the API.
 
