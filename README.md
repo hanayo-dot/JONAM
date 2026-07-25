@@ -120,4 +120,8 @@ npm run dev
 ---
 
 ## 🌐 Production Deployment
+
 The project is configured for seamless static & containerized deployment:
+
+**Firebase Hosting**: Run `firebase deploy` to host the compiled static frontend from `frontend/out`.
+* **Container Hosting**: Deploy the `Dockerfile` to Google Cloud Run, Railway, or AWS App Runner for full live Flask & Gemini AI capabilities.
