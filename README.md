@@ -109,3 +109,12 @@ Open [http://localhost:8080](http://localhost:8080) in your browser.
 pip install -r requirements.txt
 python app.py
 ```
+
+#### Frontend (Next.js)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
