@@ -41,7 +41,7 @@ export default function ScorecardReport({ report, loading, onGenerate }: Scoreca
     return (
       <div className="presentation-card text-center py-10">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-xs font-semibold text-slate-400">Executing ML Spatial Risk Inference & Assessment...</p>
+        <p className="text-xs font-semibold text-slate-400">Evaluating AI Agents Assessment & Inference...</p>
       </div>
     )
   }
@@ -149,7 +149,7 @@ export default function ScorecardReport({ report, loading, onGenerate }: Scoreca
       </div>
 
       <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700/50">
-        <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1.5">ML AGENT ASSESSMENT</div>
+        <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1.5">AI AGENTS ASSESSMENT</div>
         <p className="text-xs text-slate-300 leading-relaxed">{summaryText}</p>
       </div>
 

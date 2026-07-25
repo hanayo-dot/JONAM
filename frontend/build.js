@@ -138,7 +138,7 @@ const bundleHTML = `<!DOCTYPE html>
       if (loading) {
         return (
           <div className="presentation-card" style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 600 }}>Executing ML Spatial Risk Inference & Assessment...</div>
+            <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 600 }}>Evaluating AI Agents Assessment & Inference...</div>
           </div>
         );
       }
@@ -229,7 +229,7 @@ const bundleHTML = `<!DOCTYPE html>
           </div>
 
           <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51, 65, 85, 0.5)', marginTop: '18px' }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', marginBottom: '6px' }}>ML AGENT ASSESSMENT</div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', marginBottom: '6px' }}>AI AGENTS ASSESSMENT</div>
             <p style={{ fontSize: '0.825rem', color: '#cbd5e1', lineHeight: 1.5 }}>{report.synergistic_summary || report.agent_summary || report.gemini_summary}</p>
           </div>
 
@@ -400,4 +400,4 @@ const bundleHTML = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
-console.log('Successfully updated report section header to ML AGENT ASSESSMENT in frontend/out/index.html');
+console.log('Successfully updated section header to AI AGENTS ASSESSMENT in frontend/out/index.html');
