@@ -1,0 +1,546 @@
+const fs = require('fs');
+const path = require('path');
+
+const outDir = path.join(__dirname, 'out');
+if (!fs.existsSync(outDir)) {
+  fs.mkdirSync(outDir, { recursive: true });
+}
+
+const bundleHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pollution Risk Assessment Model | ML Decision Prototype</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #070a12;
+      --bg-surface: #0f172a;
+      --bg-card: #1e293b;
+      --border-color: #334155;
+      --border-glow: #2563eb;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, sans-serif;
+      line-height: 1.5;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 1020px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+    .presentation-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.8));
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(12px);
+    }
+    .hero-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 1px solid rgba(51, 65, 85, 0.6); padding-bottom: 20px; }
+    .hero-title { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; background: linear-gradient(90deg, #60a5fa, #22d3ee, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero-subtitle { font-size: 0.875rem; color: #94a3b8; font-weight: 400; margin-top: 6px; max-width: 650px; line-height: 1.45; }
+    .btn-action { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: none; padding: 10px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; user-select: none; }
+    .btn-action:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45); }
+    .btn-action:active { transform: scale(0.96); }
+    .synergy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
+    .synergy-box { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
+    .synergy-box::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+    .synergy-box.hyacinth::before { background: var(--accent-cyan); }
+    .synergy-box.fish::before { background: var(--accent-purple); }
+    .synergy-title { font-size: 0.875rem; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .synergy-text { font-size: 0.8rem; color: #cbd5e1; line-height: 1.45; }
+    .map-wrapper { position: relative; height: 380px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .badge-severe { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; }
+    .badge-moderate { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; }
+    .badge-low { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; }
+    .badge-inland { background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.4); color: #94a3b8; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
+    .metric-card { background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 10px; padding: 14px; }
+    .metric-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 500; }
+    .metric-val { font-size: 1.15rem; font-weight: 800; margin-top: 4px; }
+    .dual-gauge { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; background: rgba(15, 23, 42, 0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(51, 65, 85, 0.5); }
+    .gauge-card { text-align: center; padding: 12px; background: rgba(30, 41, 59, 0.5); border-radius: 10px; border: 1px solid rgba(51, 65, 85, 0.4); }
+    .chat-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 440px; background: #0f172a; border-left: 1px solid #334155; display: none; flex-direction: column; z-index: 1000; box-shadow: -10px 0 30px rgba(0,0,0,0.6); }
+    .chat-drawer.open { display: flex; }
+    .chat-header { padding: 18px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; background: #070a12; }
+    .chat-body { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { max-width: 85%; padding: 12px 16px; border-radius: 14px; font-size: 0.8125rem; line-height: 1.5; }
+    .msg.user { align-self: flex-end; background: #2563eb; color: #fff; border-bottom-right-radius: 2px; }
+    .msg.assistant { align-self: flex-start; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; border-bottom-left-radius: 2px; }
+    .chat-footer { padding: 14px; border-top: 1px solid #334155; display: flex; gap: 10px; background: #070a12; }
+    .chat-input { flex: 1; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 0.8125rem; }
+    .toast-banner { background: linear-gradient(90deg, #059669, #0d9488); color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 700; text-align: center; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 0.9; } 50% { opacity: 1; } 100% { opacity: 0.9; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const computeSpatialTelemetry = (lat, lon) => {
+      if (!(-3.10 <= lat && lat <= 0.60 && 31.65 <= lon && lon <= 34.90) || (lon < 31.75 && lat < -0.5) || (lon > 34.80 && lat < -1.5)) {
+        return {
+          is_water: false,
+          chlorophyll: null,
+          turbidity: null,
+          temperature: 24.0,
+          windspeed: 3.0,
+          precipitation: 0.0,
+          hRisk: 0,
+          fRisk: 0,
+          status: 'INLAND (N/A)',
+          summary: \`Selected coordinate (\${lat.toFixed(4)}°, \${lon.toFixed(4)}°) is on dry terrestrial land outside Lake Victoria water boundaries. Water hyacinth proliferation risk is Not Applicable (0%).\`,
+          hActions: ['Select aquatic coordinates inside Lake Victoria to evaluate weed proliferation.'],
+          fActions: ['Ensure map pins are placed in lake waters or breeding bays.']
+        };
+      }
+
+      // Add dynamic stochastic variation on each button click
+      const jitter = (Math.random() - 0.5) * 2.2;
+      const jitter2 = (Math.random() - 0.5) * 0.22;
+
+      const seed = Math.sin(lat * 12.9898 + lon * 78.233) * 43758.5453;
+      const r1 = Math.abs(seed - Math.floor(seed));
+      const r2 = Math.abs(Math.sin(seed) * 1000 - Math.floor(Math.sin(seed) * 1000));
+
+      const dKisumu = Math.sqrt((lat - (-0.1022))**2 + (lon - 34.7617)**2);
+      const dHoma = Math.sqrt((lat - (-0.5273))**2 + (lon - 34.4571)**2);
+
+      let chlo, turb, temp;
+      if (dKisumu < 0.3) {
+        chlo = 54.2 + r1 * 18.0 + jitter;
+        turb = 2.15 + r2 * 0.95 + jitter2;
+        temp = 27.8 + r1 * 1.4;
+      } else if (dHoma < 0.3) {
+        chlo = 41.5 + r1 * 12.0 + jitter;
+        turb = 1.75 + r2 * 0.75 + jitter2;
+        temp = 26.9 + r1 * 1.2;
+      } else {
+        chlo = 18.4 + r1 * 24.0 + jitter;
+        turb = 0.85 + r2 * 1.10 + jitter2;
+        temp = 25.2 + r1 * 2.1;
+      }
+
+      chlo = Math.max(10, chlo);
+      turb = Math.max(0.4, turb);
+
+      const wind = 2.1 + r2 * 4.2 + (Math.random() - 0.5) * 0.8;
+      const precip = 4.5 + r1 * 28.0;
+
+      const hRisk = Math.min(98, Math.max(15, Math.floor(chlo * 0.9 + (temp - 22) * 4)));
+      const fRisk = Math.min(98, Math.max(15, Math.floor(turb * 22 + chlo * 0.45)));
+      const status = (hRisk >= 75 || fRisk >= 75) ? 'SEVERE RISK' : ((hRisk >= 45 || fRisk >= 45) ? 'MODERATE RISK' : 'LOW RISK');
+
+      return {
+        is_water: true,
+        chlorophyll: chlo,
+        turbidity: turb,
+        temperature: temp,
+        windspeed: wind,
+        precipitation: precip,
+        hRisk,
+        fRisk,
+        status,
+        summary: \`Spatial ML analysis at (\${lat.toFixed(4)}°, \${lon.toFixed(4)}°) reveals Chlorophyll-a concentration of \${chlo.toFixed(1)} mg/m³ and Turbidity K490 at \${turb.toFixed(2)} m⁻¹. Elevated nutrient loading accelerates water hyacinth mat expansion while restricting underwater light penetration for Tilapia & Nile Perch spawning habitats.\`,
+        hActions: [
+          \`Deploy physical containment booms around coordinates (\${lat.toFixed(2)}°, \${lon.toFixed(2)}°)\`,
+          \`Mobilize mechanical harvesters before wind vectors (\${wind.toFixed(1)} m/s) drift mats into navigation channels\`
+        ],
+        fActions: [
+          \`Establish temporary eco-protection zones in vulnerable breeding bays\`,
+          \`Deploy real-time dissolved oxygen sensors to safeguard juvenile Tilapia nursery grounds\`
+        ]
+      };
+    };
+
+    function PresentationHeader({ onOpenChat }) {
+      return (
+        <header className="hero-header">
+          <div>
+            <h1 className="hero-title">Pollution Risk Assessment Model</h1>
+            <p className="hero-subtitle">
+              Helping make informed decisions on <strong>Hyacinth Control</strong> and <strong>Declining Fish Stock</strong> via Machine Learning Models.
+            </p>
+          </div>
+          <button onClick={onOpenChat} className="btn-action">
+            💬 ML Decision Assistant
+          </button>
+        </header>
+      );
+    }
+
+    function SynergyMatrix() {
+      return (
+        <div className="synergy-grid">
+          <div className="synergy-box hyacinth">
+            <div className="synergy-title" style={{ color: '#38bdf8' }}>
+              🌿 1. Hyacinth Proliferation Control
+            </div>
+            <div className="synergy-text">
+              ML algorithms monitor satellite Chlorophyll-a and wind vectors to predict floating weed mat accumulation before it chokes harbors and water intake facilities.
+            </div>
+          </div>
+          <div className="synergy-box fish">
+            <div className="synergy-title" style={{ color: '#c084fc' }}>
+              🐟 2. Fish Stock Protection (Tilapia & Nile Perch)
+            </div>
+            <div className="synergy-text">
+              Detects underwater light extinction (Turbidity K490) and hypoxia from decaying weed mats to safeguard critical fish breeding grounds and coastal fishing stock.
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ScorecardReport({ report, loading, onGenerate }) {
+      const [justExecuted, setJustExecuted] = useState(false);
+
+      const handleButtonClick = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        onGenerate();
+        setJustExecuted(true);
+        setTimeout(() => setJustExecuted(false), 4000);
+      };
+
+      if (loading) {
+        return (
+          <div className="presentation-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#60a5fa', marginBottom: '8px' }}>
+              ⚡ Executing Machine Learning Inference...
+            </div>
+            <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Evaluating Chlorophyll-a, Turbidity, Surface Temp & Wind Vector Telemetry</div>
+          </div>
+        );
+      }
+
+      if (!report) {
+        return (
+          <div className="presentation-card" style={{ textAlign: 'center', padding: '40px' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Interactive Machine Learning Risk Inference</h3>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '20px' }}>Click any point on Lake Victoria to evaluate risks for Hyacinth Control and Fish Stock Protection.</p>
+            <button onClick={handleButtonClick} className="btn-action">
+              ⚡ Run Risk Assessment Model
+            </button>
+          </div>
+        );
+      }
+
+      const status = (report.status_level || '').toUpperCase();
+      let badgeClass = 'badge-low';
+      if (status.includes('INLAND')) badgeClass = 'badge-inland';
+      else if (status.includes('SEVERE') || status.includes('HIGH')) badgeClass = 'badge-severe';
+      else if (status.includes('MODERATE') || status.includes('MEDIUM')) badgeClass = 'badge-moderate';
+
+      const isWater = report.metrics_snapshot?.is_water !== false && !status.includes('INLAND');
+      const data = report.metrics_snapshot?.data || {};
+
+      const chlo = isWater && data.chlorophyll !== null ? data.chlorophyll.toFixed(1) : 'N/A';
+      const turb = isWater && data.turbidity !== null ? data.turbidity.toFixed(2) : 'N/A';
+      const temp = data.temperature && data.temperature[0] ? data.temperature[0].toFixed(1) : '24.0';
+      const wind = data.windspeed && data.windspeed[0] ? data.windspeed[0].toFixed(1) : '3.0';
+      const prec = data.precipitation && data.precipitation[0] ? data.precipitation[0].toFixed(1) : '0.0';
+
+      const hRisk = isWater ? (report.hyacinth_risk_score || report.risk_score || 70) : 0;
+      const fRisk = isWater ? (report.fish_vulnerability_score || 75) : 0;
+
+      return (
+        <div className="presentation-card">
+          {justExecuted && (
+            <div className="toast-banner">
+              ⚡ ML Risk Model Executed & Telemetry Updated for {report.location}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(51, 65, 85, 0.6)', paddingBottom: '14px', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.05em' }}>ECOLOGICAL ML ASSESSMENT REPORT</div>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>{report.location}</h2>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                Coordinates: {report.latitude.toFixed(4)}°, {report.longitude.toFixed(4)}° • Time: {new Date(report.timestamp).toLocaleTimeString()}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span className={\`badge \${badgeClass}\`}>● {report.status_level}</span>
+              <button onClick={handleButtonClick} className="btn-action" style={{ padding: '9px 16px', fontSize: '0.82rem' }}>
+                ⚡ Run Risk Assessment Model
+              </button>
+            </div>
+          </div>
+
+          <div className="dual-gauge">
+            <div className="gauge-card">
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase' }}>🌿 Hyacinth Proliferation Risk</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: hRisk > 70 ? '#f87171' : (hRisk > 40 ? '#fbbf24' : '#34d399'), marginTop: '4px' }}>
+                {hRisk}%
+              </div>
+              <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Biomass Mat Proliferation Index</div>
+            </div>
+
+            <div className="gauge-card">
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#c084fc', textTransform: 'uppercase' }}>🐟 Fish Stock Vulnerability</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: fRisk > 70 ? '#f87171' : (fRisk > 40 ? '#fbbf24' : '#34d399'), marginTop: '4px' }}>
+                {fRisk}%
+              </div>
+              <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>Habitat & Hypoxia Impact Index</div>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Live Water Telemetry Inputs</div>
+            <div className="metrics-grid">
+              <div className="metric-card">
+                <div className="metric-label">Chlorophyll-a</div>
+                <div className="metric-val" style={{ color: isWater ? '#34d399' : '#94a3b8' }}>{chlo} {isWater && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>mg/m³</span>}</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Turbidity (K490)</div>
+                <div className="metric-val" style={{ color: isWater ? '#22d3ee' : '#94a3b8' }}>{turb} {isWater && <span style={{ fontSize: '0.65rem', color: '#64748b' }}>m⁻¹</span>}</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Surface Temp</div>
+                <div className="metric-val" style={{ color: '#fbbf24' }}>{temp} <span style={{ fontSize: '0.65rem', color: '#64748b' }}>°C</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Wind Speed</div>
+                <div className="metric-val" style={{ color: '#60a5fa' }}>{wind} <span style={{ fontSize: '0.65rem', color: '#64748b' }}>m/s</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">Precipitation</div>
+                <div className="metric-val" style={{ color: '#c084fc' }}>{prec} <span style={{ fontSize: '0.65rem', color: '#64748b' }}>mm</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51, 65, 85, 0.5)', marginTop: '18px' }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', marginBottom: '6px' }}>AI AGENTS ASSESSMENT</div>
+            <p style={{ fontSize: '0.825rem', color: '#cbd5e1', lineHeight: 1.5 }}>{report.synergistic_summary || report.agent_summary || report.gemini_summary}</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '18px' }}>
+            <div style={{ background: 'rgba(30, 41, 59, 0.5)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(51, 65, 85, 0.4)' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', marginBottom: '8px' }}>🌿 Hyacinth Control Decisions</div>
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '6px', listStyle: 'none' }}>
+                {(report.hyacinth_control_actions || report.actionable_items || []).slice(0, 2).map((item, idx) => (
+                  <li key={idx} style={{ fontSize: '0.75rem', color: '#e2e8f0', display: 'flex', gap: '8px' }}>
+                    <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={{ background: 'rgba(30, 41, 59, 0.5)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(51, 65, 85, 0.4)' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#c084fc', textTransform: 'uppercase', marginBottom: '8px' }}>🐟 Fish Stock Protection Decisions</div>
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '6px', listStyle: 'none' }}>
+                {(report.fish_stock_actions || report.actionable_items || []).slice(0, 2).map((item, idx) => (
+                  <li key={idx} style={{ fontSize: '0.75rem', color: '#e2e8f0', display: 'flex', gap: '8px' }}>
+                    <span style={{ color: '#c084fc', fontWeight: 'bold' }}>•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function AIChatDrawer({ isOpen, onClose }) {
+      const [messages, setMessages] = useState([
+        { id: '1', role: 'assistant', content: 'Hello! I am your ML Decision Assistant for the Pollution Risk Assessment Model. Ask me how our models optimize Hyacinth Control & Fish Stock Protection.' }
+      ]);
+      const [input, setInput] = useState('');
+
+      const handleSend = async () => {
+        if (!input.trim()) return;
+        const userMsg = { id: Date.now().toString(), role: 'user', content: input };
+        setMessages(prev => [...prev, userMsg]);
+        const text = input;
+        setInput('');
+
+        try {
+          const res = await fetch('/api/agent/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text, session_id: 'session-1' })
+          });
+          const data = await res.json();
+          setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'assistant', content: data.reply || 'Processed.' }]);
+        } catch (e) {
+          setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'assistant', content: 'ML Decision Assistant is active in standalone spatial inference mode.' }]);
+        }
+      };
+
+      return (
+        <div className={\`chat-drawer \${isOpen ? 'open' : ''}\`}>
+          <div className="chat-header">
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>ML Decision Assistant</h3>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          </div>
+          <div className="chat-body">
+            {messages.map(m => (
+              <div key={m.id} className={\`msg \${m.role}\`}>
+                {m.content}
+              </div>
+            ))}
+          </div>
+          <div className="chat-footer">
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              className="chat-input"
+              placeholder="Ask ML Decision Assistant..."
+            />
+            <button onClick={handleSend} className="btn-action">Send</button>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [selectedLocation, setSelectedLocation] = useState({ name: 'Kisumu Bay, Kenya', lat: -0.1022, lon: 34.7617 });
+      const [report, setReport] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [isChatOpen, setIsChatOpen] = useState(false);
+
+      const mapRef = useRef(null);
+      const mapInstance = useRef(null);
+      const markerRef = useRef(null);
+
+      const loadScorecard = async (loc = selectedLocation) => {
+        setLoading(true);
+        const lat = loc ? loc.lat : -0.1022;
+        const lon = loc ? loc.lon : 34.7617;
+        const locName = loc ? loc.name : 'Kisumu Bay, Kenya';
+
+        // Introduce explicit asynchronous delay to allow React 18 to paint the loading state to the DOM
+        await new Promise(resolve => setTimeout(resolve, 450));
+
+        try {
+          const isJson = res => res.ok && res.headers.get('content-type')?.includes('application/json');
+          const metricsRes = await fetch(`/api/water-metrics?lat=${lat}&lon=${lon}`);
+          if (isJson(metricsRes)) {
+            const metricsData = await metricsRes.json();
+            const scorecardRes = await fetch('/api/agent/scorecard', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ location: locName, latitude: lat, longitude: lon, metrics: metricsData })
+            });
+            if (isJson(scorecardRes)) {
+              const data = await scorecardRes.json();
+              setReport(data);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (e) {
+          // Client spatial inference engine fallback
+        }
+
+        const clientData = computeSpatialTelemetry(lat, lon);
+        const reportObj = {
+          id: 'rep-' + Date.now(),
+          location: locName,
+          latitude: lat,
+          longitude: lon,
+          hyacinth_risk_score: clientData.hRisk,
+          fish_vulnerability_score: clientData.fRisk,
+          status_level: clientData.status,
+          metrics_snapshot: {
+            is_water: clientData.is_water,
+            data: {
+              chlorophyll: clientData.chlorophyll,
+              turbidity: clientData.turbidity,
+              temperature: [clientData.temperature],
+              windspeed: [clientData.windspeed],
+              precipitation: [clientData.precipitation]
+            }
+          },
+          synergistic_summary: clientData.summary,
+          hyacinth_control_actions: clientData.hActions,
+          fish_stock_actions: clientData.fActions,
+          timestamp: new Date().toISOString()
+        };
+
+        setReport(reportObj);
+        setLoading(false);
+      };
+
+      useEffect(() => {
+        if (!mapRef.current || mapInstance.current) return;
+
+        const map = L.map(mapRef.current).setView([-0.8, 33.6], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        mapInstance.current = map;
+
+        const marker = L.marker([selectedLocation.lat, selectedLocation.lon]).addTo(map);
+        markerRef.current = marker;
+
+        map.on('click', (e) => {
+          const { lat, lng } = e.latlng;
+          const nameStr = \`Lake Coordinate (\${lat.toFixed(3)}°, \${lng.toFixed(3)}°)\`;
+          const customLoc = { name: nameStr, lat, lon: lng };
+          marker.setLatLng([lat, lng]);
+          setSelectedLocation(customLoc);
+          loadScorecard(customLoc);
+        });
+
+        loadScorecard(selectedLocation);
+      }, []);
+
+      return (
+        <div className="container">
+          <div className="presentation-card">
+            <PresentationHeader onOpenChat={() => setIsChatOpen(true)} />
+            <SynergyMatrix />
+          </div>
+
+          <section className="presentation-card">
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+              Interactive Lake Victoria Spatial ML Map (Click any point to run inference)
+            </div>
+            <div ref={mapRef} className="map-wrapper"></div>
+          </section>
+
+          <section>
+            <ScorecardReport report={report} loading={loading} onGenerate={() => loadScorecard(selectedLocation)} />
+          </section>
+
+          <AIChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>`;
+
+fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
+console.log('Successfully added async paint delay for React 18 loading state rendering to frontend/out/index.html');

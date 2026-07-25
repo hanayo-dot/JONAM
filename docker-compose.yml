@@ -1,15 +1,7 @@
 services:
-  api:
-    build:
-      context: .
-      dockerfile: api/Dockerfile
+  web:
+    build: .
     ports:
       - "8080:8080"
     env_file:
       - .env
-    depends_on:
-      - worker
-  worker:
-    build: ./worker
-    ports:
-      - "8081:8081"
