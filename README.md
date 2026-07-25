@@ -74,3 +74,28 @@ flowchart TD
 ---
 
 ## 🚀 Getting Started
+
+### Prerequisites
+* Python 3.11+
+* Node.js 18+ (for frontend development)
+* Docker (optional)
+
+### 1. Environment Setup
+Copy `.env.example` or create a `.env` file in the root directory:
+
+```env
+KIJANI_API_BASE=https://api.kijanispace.eu
+KIJANI_API_KEY=your_kijani_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+PORT=8080
+```
+
+### 2. Running with Docker (Recommended)
+
+```bash
+# Build Docker image
+docker build -t jonam-risk-assessment .
+
+# Run container
+docker run -p 8080:8080 --env-file .env jonam-risk-assessment
+```
