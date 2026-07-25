@@ -31,3 +31,46 @@ Lake Victoria faces severe ecological pressures caused by agricultural runoff, i
 
 ---
 
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    User([User / Stakeholder]) -->|Click Coordinate / Chat| Frontend[Next.js 14 / React 18 Frontend]
+    Frontend -->|GET /api/water-metrics| Backend[Python Flask Backend app.py]
+    Frontend -->|POST /api/agent/scorecard| Backend
+    Frontend -->|POST /api/agent/chat| Backend
+    
+    Backend -->|Limnology / Weather Telemetry| Kijani[KijaniSpace Agro-Climate API]
+    Backend -->|Synthesize Telemetry & Actions| Gemini[Google Gemini 1.5 Flash AI]
+    
+    Backend -->|JSON Scorecard Report| Frontend
+    Frontend -->|Static Host Fallback| ClientEngine[Client Spatial ML Engine]
+```
+
+### Stack Components:
+* **Frontend**: Next.js 14, React 18, Tailwind CSS, Leaflet.js, Lucide Icons.
+* **Backend**: Python 3.11, Flask, Flask-CORS, Requests, NumPy, Pillow.
+* **External APIs**: KijaniSpace Agro-Climate API (`api.kijanispace.eu`), Google Gemini AI REST API.
+* **Deployment**: Docker (`Dockerfile`), Firebase Hosting (`firebase.json`).
+
+---
+
+## 📡 API Endpoints
+
+### 1. Water Telemetry
+`GET /api/water-metrics?lat={lat}&lon={lon}`
+* Returns Chlorophyll-a, Turbidity ($K_{490}$), water temperature, wind speed, and precipitation for the given coordinate in Lake Victoria.
+
+### 2. Ecological Risk Scorecard
+`POST /api/agent/scorecard`
+* **Body**: `{ "location": "Kisumu Bay", "latitude": -0.1022, "longitude": 34.7617, "metrics": { ... } }`
+* **Response**: Returns dual risk scores, status level (`LOW`, `MODERATE`, `SEVERE RISK`), telemetry snapshot, AI agent summary, and targeted action items for hyacinth control and fish stock protection.
+
+### 3. ML Decision Assistant Chat
+`POST /api/agent/chat`
+* **Body**: `{ "message": "How do wind patterns affect hyacinth movement in Kisumu?", "session_id": "session-1" }`
+* **Response**: Returns AI-generated limnological guidance.
+
+---
+
+## 🚀 Getting Started
