@@ -54,6 +54,7 @@ const bundleHTML = `<!DOCTYPE html>
     .badge-severe { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
     .badge-moderate { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; }
     .badge-low { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+    .badge-inland { background: rgba(156, 163, 175, 0.15); border: 1px solid rgba(156, 163, 175, 0.3); color: #9ca3af; }
     .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
     .metric-card { background: rgba(31, 41, 55, 0.6); border: 1px solid rgba(55, 65, 81, 0.5); border-radius: 8px; padding: 12px; }
     .metric-label { font-size: 0.7rem; color: var(--text-muted); }
@@ -89,29 +90,30 @@ const bundleHTML = `<!DOCTYPE html>
         return (
           <div className="lean-card" style={{ textAlign: 'center', padding: '32px' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>AI Ecological Risk Scorecard</h3>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Click any point on the map above to select coordinates and generate an ecological risk report.</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '16px' }}>Click any point on Lake Victoria to select coordinates and generate an ecological risk report.</p>
             <button onClick={onGenerate} className="btn-lean">Generate Risk Report</button>
           </div>
         );
       }
 
-      const getBadgeClass = (status) => {
-        const s = status.toUpperCase();
-        if (s.includes('SEVERE') || s.includes('HIGH')) return 'badge-severe';
-        if (s.includes('MODERATE') || s.includes('MEDIUM')) return 'badge-moderate';
-        return 'badge-low';
-      };
+      const status = (report.status_level || '').toUpperCase();
+      let badgeClass = 'badge-low';
+      if (status.includes('INLAND')) badgeClass = 'badge-inland';
+      else if (status.includes('SEVERE') || status.includes('HIGH')) badgeClass = 'badge-severe';
+      else if (status.includes('MODERATE') || status.includes('MEDIUM')) badgeClass = 'badge-moderate';
 
+      const isWater = report.metrics_snapshot?.is_water !== false && !status.includes('INLAND');
       const data = report.metrics_snapshot?.data || {};
-      const chlo = data.chlorophyll ? data.chlorophyll.toFixed(1) : '38.4';
-      const turb = data.turbidity ? data.turbidity.toFixed(2) : '1.65';
-      const temp = data.temperature && data.temperature[0] ? data.temperature[0].toFixed(1) : '26.8';
-      const wind = data.windspeed && data.windspeed[0] ? data.windspeed[0].toFixed(1) : '3.4';
-      const prec = data.precipitation && data.precipitation[0] ? data.precipitation[0].toFixed(1) : '12.2';
+
+      const chlo = isWater && data.chlorophyll !== null ? data.chlorophyll.toFixed(1) : 'N/A';
+      const turb = isWater && data.turbidity !== null ? data.turbidity.toFixed(2) : 'N/A';
+      const temp = data.temperature && data.temperature[0] ? data.temperature[0].toFixed(1) : '24.0';
+      const wind = data.windspeed && data.windspeed[0] ? data.windspeed[0].toFixed(1) : '3.0';
+      const prec = data.precipitation && data.precipitation[0] ? data.precipitation[0].toFixed(1) : '0.0';
 
       return (
         <div className="lean-card">
-          <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justify: 'space-between', items: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '16px' }}>
             <div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ECOLOGICAL RISK SCORECARD</div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{report.location}</h2>
@@ -120,10 +122,10 @@ const bundleHTML = `<!DOCTYPE html>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span className={\`badge \${getBadgeClass(report.status_level)}\`}>● {report.status_level}</span>
+              <span className={\`badge \${badgeClass}\`}>● {report.status_level}</span>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{report.risk_score}%</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Risk Score</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{isWater ? report.risk_score + '%' : '0%'}</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{isWater ? 'Risk Score' : 'Land Point'}</div>
               </div>
             </div>
           </div>
@@ -133,14 +135,14 @@ const bundleHTML = `<!DOCTYPE html>
             <div className="metrics-grid">
               <div className="metric-card">
                 <div className="metric-label">Chlorophyll-a</div>
-                <div className="metric-val" style={{ color: '#34d399' }}>{chlo} <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>mg/m³</span></div>
+                <div className="metric-val" style={{ color: isWater ? '#34d399' : '#9ca3af' }}>{chlo} {isWater && <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>mg/m³</span>}</div>
               </div>
               <div className="metric-card">
                 <div className="metric-label">Turbidity (K490)</div>
-                <div className="metric-val" style={{ color: '#22d3ee' }}>{turb} <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>m⁻¹</span></div>
+                <div className="metric-val" style={{ color: isWater ? '#22d3ee' : '#9ca3af' }}>{turb} {isWater && <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>m⁻¹</span>}</div>
               </div>
               <div className="metric-card">
-                <div className="metric-label">Water Temp</div>
+                <div className="metric-label">Air/Surface Temp</div>
                 <div className="metric-val" style={{ color: '#fbbf24' }}>{temp} <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>°C</span></div>
               </div>
               <div className="metric-card">
@@ -315,4 +317,4 @@ const bundleHTML = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
-console.log('Successfully removed preset buttons and re-compiled React 18 map bundle to frontend/out/index.html');
+console.log('Successfully re-compiled React 18 Leaflet Map bundle with land boundary support to frontend/out/index.html');

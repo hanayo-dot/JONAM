@@ -36,12 +36,7 @@ KIJANI_PASS = os.getenv('KIJANI_PASSWORD', '')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyCaqQ8WPJxy0RRb3_k1mveCo1Ofl2lhFVA')
 
 MEMORY_STORE = {
-    'watchlists': [
-        {'id': 'loc-1', 'name': 'Kisumu Bay, Kenya', 'latitude': -0.1022, 'longitude': 34.7617},
-        {'id': 'loc-2', 'name': 'Homa Bay, Kenya', 'latitude': -0.5273, 'longitude': 34.4571},
-        {'id': 'loc-3', 'name': 'Jinja, Uganda', 'latitude': 0.4244, 'longitude': 33.2042},
-        {'id': 'loc-4', 'name': 'Entebbe, Uganda', 'latitude': 0.0512, 'longitude': 32.4637}
-    ],
+    'watchlists': [],
     'reports': []
 }
 
@@ -56,14 +51,44 @@ def get_auth_headers():
 def has_kijani_auth():
     return bool(KIJANI_API_KEY or KIJANI_TOKEN)
 
-# Dynamic Telemetry Generator based on Lat/Lon coordinates
+# Check if coordinate is inside Lake Victoria water body boundary
+def is_lake_victoria_water(lat_val: float, lon_val: float) -> bool:
+    # Lake Victoria boundaries: Lat -3.05 to 0.55, Lon 31.70 to 34.85
+    if not (-3.10 <= lat_val <= 0.60 and 31.65 <= lon_val <= 34.90):
+        return False
+    
+    # West shore boundary check (e.g., Lon < 31.75 at Lat < -1.0 is inland Tanzania/Uganda)
+    if lon_val < 31.75 and lat_val < -0.5:
+        return False
+
+    # East/South land boundary checks
+    if lon_val > 34.80 and lat_val < -1.5:
+        return False
+        
+    return True
+
+# Dynamic Spatial Telemetry Engine
 def generate_dynamic_telemetry(lat_val: float, lon_val: float):
-    # Deterministic spatial hash
+    # Check if point is on land
+    if not is_lake_victoria_water(lat_val, lon_val):
+        return {
+            "is_water": False,
+            "location": {"latitude": lat_val, "longitude": lon_val, "timezone": "Africa/Nairobi"},
+            "units": {"precipitation": "mm", "temperature": "°C", "windspeed": "m/s", "turbidity": "m⁻¹", "chlorophyll": "mg/m³"},
+            "data": {
+                "chlorophyll": None,
+                "turbidity": None,
+                "temperature": [24.0],
+                "windspeed": [3.0],
+                "precipitation": [0.0]
+            }
+        }
+
+    # Deterministic spatial seed
     seed = math.sin(lat_val * 12.9898 + lon_val * 78.233) * 43758.5453
     rand_val = abs(seed - math.floor(seed))
     rand_val2 = abs(math.sin(seed) * 1000 - math.floor(math.sin(seed) * 1000))
 
-    # Chlorophyll: bays like Kisumu (-0.1, 34.7) have higher nutrients
     dist_to_kisumu = math.sqrt((lat_val - (-0.1022))**2 + (lon_val - 34.7617)**2)
     dist_to_homabay = math.sqrt((lat_val - (-0.5273))**2 + (lon_val - 34.4571)**2)
 
@@ -84,6 +109,7 @@ def generate_dynamic_telemetry(lat_val: float, lon_val: float):
     precip = 4.5 + rand_val * 28.0
 
     return {
+        "is_water": True,
         "location": {"latitude": lat_val, "longitude": lon_val, "timezone": "Africa/Nairobi"},
         "units": {
             "precipitation": "mm",
@@ -120,6 +146,9 @@ def handle_water_metrics():
     except ValueError:
         lat, lon = -0.1022, 34.7617
 
+    if not is_lake_victoria_water(lat, lon):
+        return jsonify(generate_dynamic_telemetry(lat, lon))
+
     if has_kijani_auth():
         try:
             url = f"{KIJANI_BASE}/v1/agro_climate/water?lat={lat}&lon={lon}"
@@ -130,6 +159,7 @@ def handle_water_metrics():
                 forecast_data = payload.get('forecast_data', {})
                 units = payload.get('units', {})
                 return jsonify({
+                    "is_water": True,
                     "location": payload.get('location', {}),
                     "units": {
                         "precipitation": units.get('precipitation', 'mm'),
@@ -151,7 +181,6 @@ def handle_water_metrics():
         except Exception:
             pass
 
-    # Dynamic spatial telemetry fallback
     return jsonify(generate_dynamic_telemetry(lat, lon))
 
 
@@ -174,12 +203,35 @@ def call_gemini_api(prompt: str) -> str:
 @app.route('/api/agent/scorecard', methods=['POST'])
 def handle_scorecard():
     req_data = request.get_json(force=True) or {}
-    loc_name = req_data.get('location', 'Selected Map Location')
+    loc_name = req_data.get('location', 'Selected Coordinate')
     try:
         lat = float(req_data.get('latitude', -0.1022))
         lon = float(req_data.get('longitude', 34.7617))
     except (ValueError, TypeError):
         lat, lon = -0.1022, 34.7617
+
+    # Inland land check
+    if not is_lake_victoria_water(lat, lon):
+        report = {
+            "id": f"rep-{int(time.time()*1000)}",
+            "location": loc_name,
+            "latitude": lat,
+            "longitude": lon,
+            "risk_score": 0,
+            "status_level": "INLAND (N/A)",
+            "metrics_snapshot": {
+                "is_water": False,
+                "data": {"chlorophyll": None, "turbidity": None, "temperature": [24.0], "windspeed": [3.0], "precipitation": [0.0]}
+            },
+            "gemini_summary": f"Selected coordinate ({lat:.4f}°, {lon:.4f}°) is on dry terrestrial land outside Lake Victoria water boundaries. Water hyacinth proliferation risk is Not Applicable (0%).",
+            "actionable_items": [
+                "Click a coordinate within Lake Victoria or coastal bay waters to analyze water hyacinth proliferation risk.",
+                "Ensure map pins are placed in aquatic or bay regions."
+            ],
+            "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        }
+        MEMORY_STORE['reports'].append(report)
+        return jsonify(report)
 
     metrics = req_data.get('metrics') or generate_dynamic_telemetry(lat, lon)
     m_data = metrics.get('data', {})
@@ -190,27 +242,24 @@ def handle_scorecard():
     wind = m_data.get('windspeed', [3.0])[0] if isinstance(m_data.get('windspeed'), list) else 3.0
     precip = m_data.get('precipitation', [10.0])[0] if isinstance(m_data.get('precipitation'), list) else 10.0
 
-    prompt = f"""You are an expert satellite limnologist and environmental AI specialist for Lake Victoria.
-Analyze the following live Kijanispace agro-climate water telemetry for location "{loc_name}" (Lat: {lat:.4f}, Lon: {lon:.4f}):
+    prompt = f"""You are an expert satellite limnologist for Lake Victoria.
+Analyze the following live telemetry for location "{loc_name}" (Lat: {lat:.4f}, Lon: {lon:.4f}):
 
-Live Parameters:
+Parameters:
 - Chlorophyll-a: {chlo} mg/m³
 - Turbidity (K490): {turb} m⁻¹
 - Water Temp: {temp} °C
 - Wind Speed: {wind} m/s
 - Precipitation: {precip} mm
 
-Calculate the Hyacinth Proliferation Risk Score (0 - 100%) based on these exact values. Higher chlorophyll (>40 mg/m³) and warm water (>27°C) with low wind increase proliferation risk.
-
-Return your evaluation strictly in JSON without code fences:
+Calculate the Hyacinth Proliferation Risk Score (0 - 100%). Return strictly JSON:
 {{
   "risk_score": 78,
   "status_level": "SEVERE RISK",
-  "summary": "Specific ecological assessment explaining how these exact values contribute to risk at Lat {lat:.4f}, Lon {lon:.4f}.",
+  "summary": "Detailed 2-sentence limnological evaluation.",
   "action_items": [
-    "Location specific action 1",
-    "Location specific action 2",
-    "Location specific action 3"
+    "Action item 1",
+    "Action item 2"
   ]
 }}"""
 
@@ -220,14 +269,8 @@ Return your evaluation strictly in JSON without code fences:
         parsed = json.loads(cleaned)
     except Exception as e:
         print(f"Gemini call fallback: {e}")
-        # Mathematical risk calculation for dynamic fallback
         risk_score = min(98, max(15, int(chlo * 0.9 + turb * 8 + (temp - 22) * 4)))
-        if risk_score >= 75:
-            status = "SEVERE RISK"
-        elif risk_score >= 45:
-            status = "MODERATE RISK"
-        else:
-            status = "LOW RISK"
+        status = "SEVERE RISK" if risk_score >= 75 else ("MODERATE RISK" if risk_score >= 45 else "LOW RISK")
 
         parsed = {
             "risk_score": risk_score,
@@ -235,8 +278,7 @@ Return your evaluation strictly in JSON without code fences:
             "summary": f"Telemetry at ({lat:.4f}°, {lon:.4f}°) shows Chlorophyll-a at {chlo} mg/m³ and Turbidity $K_{{490}}$ at {turb} m⁻¹, driving a {status.lower()} for hyacinth proliferation.",
             "action_items": [
                 f"Monitor floating vegetation mat movement near ({lat:.2f}°, {lon:.2f}°)",
-                "Deploy physical containment booms around sensitive harbor entries",
-                "Re-evaluate satellite imagery upon wind vector changes"
+                "Deploy physical containment booms around sensitive harbor entries"
             ]
         }
 
@@ -277,21 +319,6 @@ User Question: {message}"""
         reply = "I am operating in offline mode. Please refer to our live Water Metrics and AI Risk Scorecard for Lake Victoria telemetry."
 
     return jsonify({'reply': reply, 'session_id': session_id})
-
-
-@app.route('/api/watchlists', methods=['GET', 'POST'])
-def handle_watchlists():
-    if request.method == 'POST':
-        data = request.get_json(force=True) or {}
-        data['id'] = f"loc-{int(time.time()*1000)}"
-        MEMORY_STORE['watchlists'].append(data)
-        return jsonify(data)
-    return jsonify(MEMORY_STORE['watchlists'])
-
-
-@app.route('/api/reports', methods=['GET'])
-def handle_reports():
-    return jsonify(MEMORY_STORE['reports'])
 
 
 if __name__ == '__main__':
