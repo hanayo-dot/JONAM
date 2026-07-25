@@ -148,3 +148,5 @@ export default function AIChatDrawer({ isOpen, onClose }: AIChatDrawerProps) {
     </div>
   )
 }
+
+

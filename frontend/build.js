@@ -544,3 +544,5 @@ const bundleHTML = `<!DOCTYPE html>
 
 fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
 console.log('Successfully added async paint delay for React 18 loading state rendering to frontend/out/index.html');
+
+
