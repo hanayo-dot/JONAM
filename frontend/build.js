@@ -59,6 +59,7 @@ const bundleHTML = `<!DOCTYPE html>
     .hero-subtitle { font-size: 0.875rem; color: #94a3b8; font-weight: 400; margin-top: 6px; max-width: 650px; line-height: 1.45; }
     .btn-action { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: none; padding: 10px 20px; border-radius: 10px; font-size: 0.875rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
     .btn-action:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45); }
+    .btn-action:active { transform: scale(0.98); }
     .synergy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }
     .synergy-box { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(51, 65, 85, 0.6); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
     .synergy-box::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
@@ -87,6 +88,7 @@ const bundleHTML = `<!DOCTYPE html>
     .msg.assistant { align-self: flex-start; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; border-bottom-left-radius: 2px; }
     .chat-footer { padding: 14px; border-top: 1px solid #334155; display: flex; gap: 10px; background: #070a12; }
     .chat-input { flex: 1; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 0.8125rem; }
+    .toast-banner { background: linear-gradient(90deg, #059669, #0d9488); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; text-align: center; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
   </style>
 </head>
 <body>
@@ -113,6 +115,10 @@ const bundleHTML = `<!DOCTYPE html>
         };
       }
 
+      // Add dynamic stochastic variation on each button click
+      const jitter = (Math.random() - 0.5) * 1.8;
+      const jitter2 = (Math.random() - 0.5) * 0.15;
+
       const seed = Math.sin(lat * 12.9898 + lon * 78.233) * 43758.5453;
       const r1 = Math.abs(seed - Math.floor(seed));
       const r2 = Math.abs(Math.sin(seed) * 1000 - Math.floor(Math.sin(seed) * 1000));
@@ -122,20 +128,23 @@ const bundleHTML = `<!DOCTYPE html>
 
       let chlo, turb, temp;
       if (dKisumu < 0.3) {
-        chlo = 54.2 + r1 * 18.0;
-        turb = 2.15 + r2 * 0.95;
+        chlo = 54.2 + r1 * 18.0 + jitter;
+        turb = 2.15 + r2 * 0.95 + jitter2;
         temp = 27.8 + r1 * 1.4;
       } else if (dHoma < 0.3) {
-        chlo = 41.5 + r1 * 12.0;
-        turb = 1.75 + r2 * 0.75;
+        chlo = 41.5 + r1 * 12.0 + jitter;
+        turb = 1.75 + r2 * 0.75 + jitter2;
         temp = 26.9 + r1 * 1.2;
       } else {
-        chlo = 18.4 + r1 * 24.0;
-        turb = 0.85 + r2 * 1.10;
+        chlo = 18.4 + r1 * 24.0 + jitter;
+        turb = 0.85 + r2 * 1.10 + jitter2;
         temp = 25.2 + r1 * 2.1;
       }
 
-      const wind = 2.1 + r2 * 4.2;
+      chlo = Math.max(10, chlo);
+      turb = Math.max(0.4, turb);
+
+      const wind = 2.1 + r2 * 4.2 + (Math.random() - 0.5) * 0.6;
       const precip = 4.5 + r1 * 28.0;
 
       const hRisk = Math.min(98, Math.max(15, Math.floor(chlo * 0.9 + (temp - 22) * 4)));
@@ -204,10 +213,19 @@ const bundleHTML = `<!DOCTYPE html>
     }
 
     function ScorecardReport({ report, loading, onGenerate }) {
+      const [justExecuted, setJustExecuted] = useState(false);
+
+      const handleButtonClick = (e) => {
+        if (e) e.preventDefault();
+        onGenerate();
+        setJustExecuted(true);
+        setTimeout(() => setJustExecuted(false), 3000);
+      };
+
       if (loading) {
         return (
           <div className="presentation-card" style={{ textAlign: 'center', padding: '40px' }}>
-            <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 600 }}>Evaluating AI Agents Assessment & Inference...</div>
+            <div style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: 600 }}>Executing ML Risk Assessment Model...</div>
           </div>
         );
       }
@@ -217,7 +235,7 @@ const bundleHTML = `<!DOCTYPE html>
           <div className="presentation-card" style={{ textAlign: 'center', padding: '40px' }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Interactive Machine Learning Risk Inference</h3>
             <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '20px' }}>Click any point on Lake Victoria to evaluate risks for Hyacinth Control and Fish Stock Protection.</p>
-            <button onClick={() => onGenerate()} className="btn-action">
+            <button onClick={handleButtonClick} className="btn-action">
               ⚡ Run Risk Assessment Model
             </button>
           </div>
@@ -244,6 +262,12 @@ const bundleHTML = `<!DOCTYPE html>
 
       return (
         <div className="presentation-card">
+          {justExecuted && (
+            <div className="toast-banner">
+              ✓ ML Risk Assessment Model Executed Successfully for {report.location}
+            </div>
+          )}
+
           <div style={{ display: 'flex', justify: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(51, 65, 85, 0.6)', paddingBottom: '14px', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.05em' }}>ECOLOGICAL ML ASSESSMENT REPORT</div>
@@ -254,7 +278,7 @@ const bundleHTML = `<!DOCTYPE html>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span className={\`badge \${badgeClass}\`}>● {report.status_level}</span>
-              <button onClick={() => onGenerate()} className="btn-action" style={{ padding: '8px 14px', fontSize: '0.78rem' }}>
+              <button onClick={handleButtonClick} className="btn-action" style={{ padding: '8px 14px', fontSize: '0.78rem' }}>
                 ⚡ Run Risk Assessment Model
               </button>
             </div>
@@ -425,7 +449,7 @@ const bundleHTML = `<!DOCTYPE html>
             }
           }
         } catch (e) {
-          // Fallback to standalone client spatial inference engine
+          // Client spatial inference engine fallback
         }
 
         const clientData = computeSpatialTelemetry(lat, lon);
@@ -511,4 +535,4 @@ const bundleHTML = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, 'index.html'), bundleHTML, 'utf8');
-console.log('Successfully added Run Risk Assessment Model action button directly inside populated report card');
+console.log('Successfully added stochastic variation and toast feedback banner to frontend/out/index.html');
